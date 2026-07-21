@@ -13,7 +13,7 @@ export default function GuideDetail() {
   const fetchGuide = useCallback(() => api.getGuide(stepId), [stepId]);
   const { data: state, setData: setState, loading, error } = useApi(fetchGuide, [stepId]);
 
-  // Accordeon de la checklist : replie sur mobile, toujours ouvert sur desktop (via CSS).
+  // Etat d'ouverture du drawer de checklist sur mobile (sur desktop, la sidebar est toujours visible).
   const [checklistOpen, setChecklistOpen] = useState(false);
 
   if (!guide) {
@@ -43,6 +43,33 @@ export default function GuideDetail() {
       setState({ ...state, checklist: previous });
     }
   }
+
+  // Barre de progression + liste des items : partagee entre la sidebar desktop et le drawer mobile.
+  const progressAndList = (
+    <>
+      <ProgressBar
+        className="mt-3"
+        value={(doneCount / checklist.length) * 100}
+        label="Progression de la checklist"
+      />
+
+      <ul className="mt-4 space-y-1">
+        {checklist.map((item) => (
+          <li key={item.id}>
+            <label className="flex min-h-[44px] cursor-pointer items-start gap-3 rounded-lg py-2 text-base active:bg-slate-50 lg:text-sm">
+              <input
+                type="checkbox"
+                checked={item.done}
+                onChange={() => toggle(item)}
+                className="mt-0.5 h-5 w-5 shrink-0 rounded border-slate-300 text-brand-600"
+              />
+              <span className={item.done ? 'text-slate-400 line-through' : 'text-slate-700'}>{item.label}</span>
+            </label>
+          </li>
+        ))}
+      </ul>
+    </>
+  );
 
   return (
     <>
@@ -91,52 +118,74 @@ export default function GuideDetail() {
           ))}
         </div>
 
-        {/* Checklist de fin d'etape : accordeon sur mobile, sidebar collante sur desktop */}
-        <Card className="p-5 lg:sticky lg:top-24">
-          <button
-            type="button"
-            onClick={() => setChecklistOpen((o) => !o)}
-            aria-expanded={checklistOpen}
-            className="flex min-h-[44px] w-full items-center justify-between gap-3 text-left lg:pointer-events-none lg:min-h-0"
-          >
-            <span>
-              <span className="block font-semibold text-slate-900">Checklist de fin d'étape</span>
-              <span className="mt-1 block text-sm text-slate-500">
+        {/* Checklist — desktop : sidebar collante (comportement d'origine, masquee sous lg) */}
+        <Card className="hidden p-5 lg:sticky lg:top-24 lg:block">
+          <span className="block font-semibold text-slate-900">Checklist de fin d'étape</span>
+          <span className="mt-1 block text-sm text-slate-500">
+            {doneCount} / {checklist.length} validés
+          </span>
+          {progressAndList}
+        </Card>
+      </div>
+
+      {/* Checklist — mobile : bouton flottant + drawer slide-up (masque a partir de lg) */}
+      <div className="lg:hidden">
+        {/* Bouton flottant, ancre au-dessus de la bottom nav bar (z-30) */}
+        <button
+          type="button"
+          onClick={() => setChecklistOpen(true)}
+          aria-label="Ouvrir la checklist de fin d'étape"
+          className="fixed right-4 z-40 flex min-h-[48px] items-center gap-2 rounded-full bg-brand-600 px-5 font-semibold text-white shadow-lg transition active:scale-95"
+          style={{ bottom: 'calc(4.5rem + env(safe-area-inset-bottom))' }}
+        >
+          <span>Checklist</span>
+          <span className="rounded-full bg-white/20 px-2 py-0.5 text-sm tabular-nums">
+            {doneCount}/{checklist.length} ✓
+          </span>
+        </button>
+
+        {/* Overlay semi-transparent */}
+        <div
+          onClick={() => setChecklistOpen(false)}
+          aria-hidden="true"
+          className={`fixed inset-0 z-40 bg-slate-900/50 transition-opacity duration-300 ${
+            checklistOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
+          }`}
+        />
+
+        {/* Drawer slide-up */}
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Checklist de fin d'étape"
+          className={`fixed inset-x-0 bottom-0 z-50 flex max-h-[60vh] flex-col rounded-t-2xl bg-white shadow-2xl transition-transform duration-300 ease-out ${
+            checklistOpen ? 'translate-y-0' : 'translate-y-full'
+          }`}
+        >
+          <div className="flex shrink-0 items-center justify-between border-b border-slate-200 px-5 py-4">
+            <div>
+              <span className="block font-semibold text-slate-900">Checklist</span>
+              <span className="mt-0.5 block text-sm text-slate-500">
                 {doneCount} / {checklist.length} validés
               </span>
-            </span>
-            <span
-              aria-hidden="true"
-              className={`text-slate-400 transition-transform lg:hidden ${checklistOpen ? 'rotate-180' : ''}`}
+            </div>
+            <button
+              type="button"
+              onClick={() => setChecklistOpen(false)}
+              aria-label="Fermer la checklist"
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-lg text-xl text-slate-500 active:bg-slate-100"
             >
-              ▾
-            </span>
-          </button>
-
-          <div className={`${checklistOpen ? 'block' : 'hidden'} lg:block`}>
-            <ProgressBar
-              className="mt-3"
-              value={(doneCount / checklist.length) * 100}
-              label="Progression de la checklist"
-            />
-
-            <ul className="mt-4 space-y-1">
-              {checklist.map((item) => (
-                <li key={item.id}>
-                  <label className="flex min-h-[44px] cursor-pointer items-start gap-3 rounded-lg py-2 text-base active:bg-slate-50 lg:text-sm">
-                    <input
-                      type="checkbox"
-                      checked={item.done}
-                      onChange={() => toggle(item)}
-                      className="mt-0.5 h-5 w-5 shrink-0 rounded border-slate-300 text-brand-600"
-                    />
-                    <span className={item.done ? 'text-slate-400 line-through' : 'text-slate-700'}>{item.label}</span>
-                  </label>
-                </li>
-              ))}
-            </ul>
+              ✕
+            </button>
           </div>
-        </Card>
+
+          <div
+            className="min-h-0 flex-1 overflow-y-auto px-5 py-4"
+            style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}
+          >
+            {progressAndList}
+          </div>
+        </div>
       </div>
     </>
   );
