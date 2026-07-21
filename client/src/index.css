@@ -1,0 +1,24 @@
+@import 'tailwindcss';
+
+/* Theme clair et moderne — palette et tokens partages par toute l'app. */
+@theme {
+  --color-brand-50: oklch(0.97 0.02 250);
+  --color-brand-100: oklch(0.93 0.04 250);
+  --color-brand-500: oklch(0.58 0.16 250);
+  --color-brand-600: oklch(0.51 0.17 250);
+  --color-brand-700: oklch(0.44 0.15 250);
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-slate-50 text-slate-800 antialiased;
+}
+
+/* Anneau de focus visible partout : exigence d'accessibilite clavier. */
+:focus-visible {
+  @apply outline-2 outline-offset-2 outline-brand-600;
+}

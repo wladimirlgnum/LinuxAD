@@ -1,0 +1,8 @@
+node_modules/
+dist/
+*.log
+
+# Variables d'environnement (identifiants Supabase)
+.env
+.env.*
+!.env.example
