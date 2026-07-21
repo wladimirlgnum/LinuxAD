@@ -55,12 +55,22 @@ sudo nano /etc/hosts`,
           },
           {
             type: 'code',
-            code: `sudo apt install -y samba krb5-config krb5-user winbind smbclient`,
+            code: `sudo apt install -y samba samba-ad-dc krb5-config krb5-user winbind smbclient`,
+          },
+          {
+            type: 'text',
+            content:
+              "Pendant l'installation, krb5-config pose trois questions interactives. Répondez ainsi :",
           },
           {
             type: 'note',
             content:
-              "L'installeur krb5 demande le nom du royaume (realm). Saisissez LGNUM.LOCAL en MAJUSCULES : par convention Kerberos, le realm est la version majuscule du domaine. Cette valeur sera de toute façon réécrite par le provisionnement.",
+              'Royaume Kerberos par défaut → LGNUM.LOCAL (en majuscules, convention Kerberos)\nServeur Kerberos → srvad.lgnum.local\nServeur administratif Kerberos → srvad.lgnum.local',
+          },
+          {
+            type: 'note',
+            content:
+              'Le realm LGNUM.LOCAL se saisit en MAJUSCULES : par convention Kerberos, le realm est la version majuscule du domaine. Cette valeur sera de toute façon réécrite par le provisionnement.',
           },
         ],
       },
@@ -213,6 +223,22 @@ klist` },
           { type: 'text', content: "c) Annuaire — on vérifie que le domaine répond et on liste les comptes créés :" },
           { type: 'code', code: `sudo samba-tool domain level show
 sudo samba-tool user list` },
+          {
+            type: 'text',
+            content:
+              "d) Résolution DNS du domaine — on vérifie que l'enregistrement A du domaine pointe bien sur l'adresse du serveur :",
+          },
+          { type: 'code', code: `host -t A lgnum.local 127.0.0.1` },
+          { type: 'note', content: 'Résultat attendu : lgnum.local has address 192.168.100.2' },
+          {
+            type: 'text',
+            content:
+              "e) Résolution via le resolver système — sans préciser le serveur, la requête doit aussi aboutir : c'est la preuve que le resolv.conf est correctement configuré.",
+          },
+          { type: 'code', code: `host lgnum.local` },
+          { type: 'note', content: 'Doit également retourner 192.168.100.2.' },
+          { type: 'text', content: 'f) Routage internet — on vérifie que la sortie internet fonctionne toujours après tous les changements :' },
+          { type: 'code', code: `ping -c 2 1.1.1.1` },
         ],
       },
       {
@@ -228,27 +254,37 @@ sudo samba-tool user list` },
             type: 'code',
             lang: 'yaml',
             code: `network:
-  version: 2
   ethernets:
-    ens18:
-      addresses: [192.168.100.2/24]
-      routes:
-        - to: default
-          via: 192.168.100.1
+    eno1:
+      addresses:
+      - 192.168.100.2/24
+      match:
+        macaddress: 40:b0:34:1a:3e:4c
       nameservers:
-        addresses: [127.0.0.1]
-        search: [lgnum.local]`,
+        addresses:
+        - 127.0.0.1
+        search:
+        - lgnum.local
+      routes:
+      - to: default
+        via: 192.168.100.1
+      set-name: eno1
+  version: 2`,
           },
           {
             type: 'note',
             content:
-              "Adaptez ens18 au nom réel de l'interface (à récupérer avec `ip a`). Le champ search permet de résoudre les noms courts (srvad au lieu de srvad.lgnum.local).",
+              "Adaptez eno1 et l'adresse MAC au nom réel de l'interface (à récupérer avec `ip a`). Le champ search permet de résoudre les noms courts (srvad au lieu de srvad.lgnum.local).",
           },
-          { type: 'code', code: `sudo netplan apply
-resolvectl status` },
-          { type: 'text', content: 'Vérification finale — la résolution du domaine doit fonctionner :' },
-          { type: 'code', code: `host srvad.lgnum.local
-ping -c2 google.com` },
+          { type: 'code', code: `sudo netplan apply` },
+          { type: 'text', content: 'Vérification finale — la résolution du domaine et le routage internet doivent fonctionner :' },
+          { type: 'code', code: `host lgnum.local
+ping -c 2 1.1.1.1` },
+          {
+            type: 'note',
+            content:
+              'host lgnum.local doit retourner lgnum.local has address 192.168.100.2, et le ping vers 1.1.1.1 doit passer (routage internet toujours fonctionnel).',
+          },
         ],
       },
     ],
