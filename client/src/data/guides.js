@@ -149,7 +149,39 @@ sudo systemctl status samba-ad-dc`,
         ],
       },
       {
-        title: '8. Tests de validation',
+        title: '8. Résolution du conflit DNS avec systemd-resolved',
+        blocks: [
+          {
+            type: 'text',
+            content: 'Objectif : libérer le port 53 en IPv4 pour que le DNS Samba puisse écouter.',
+          },
+          {
+            type: 'text',
+            content:
+              "Ubuntu utilise systemd-resolved comme résolveur DNS local, qui occupe le port 53. Samba a besoin de ce port pour son propre service DNS intégré. Sans cette étape, le DNS Samba n'écoute qu'en IPv6 et les requêtes DNS échouent.",
+          },
+          { type: 'code', code: `sudo nano /etc/systemd/resolved.conf` },
+          {
+            type: 'note',
+            content: 'Dans ce fichier, changez `#DNSStubListener=yes` en `DNSStubListener=no`.',
+          },
+          {
+            type: 'code',
+            code: `sudo rm /etc/resolv.conf
+echo -e "nameserver 127.0.0.1\\nsearch lgnum.local" | sudo tee /etc/resolv.conf
+sudo systemctl restart systemd-resolved
+sudo systemctl restart samba-ad-dc`,
+          },
+          { type: 'text', content: 'Test de validation :' },
+          { type: 'code', code: `sudo ss -tlnp | grep 53` },
+          {
+            type: 'note',
+            content: 'On doit voir dns[master] sur 0.0.0.0:53.',
+          },
+        ],
+      },
+      {
+        title: '9. Tests de validation',
         blocks: [
           {
             type: 'text',
@@ -184,7 +216,7 @@ sudo samba-tool user list` },
         ],
       },
       {
-        title: '9. Configuration du DNS local',
+        title: '10. Configuration du DNS local',
         blocks: [
           {
             type: 'text',
