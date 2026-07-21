@@ -49,8 +49,8 @@ export default function Dashboard() {
       <ol className="space-y-3">
         {steps.map((step) => (
           <li key={step.id}>
-            <Card className="p-4 transition hover:border-brand-300 hover:shadow-md">
-              <div className="flex flex-wrap items-start gap-4">
+            <Card className="p-4 transition active:border-brand-300 lg:hover:border-brand-300 lg:hover:shadow-md">
+              <div className="flex flex-wrap items-start gap-x-4 gap-y-3">
                 <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-slate-100 text-sm font-bold text-slate-600">
                   {step.id}
                 </span>
@@ -58,13 +58,13 @@ export default function Dashboard() {
                 <button
                   type="button"
                   onClick={() => navigate(`/guides/${step.id}`)}
-                  className="flex-1 text-left"
+                  className="min-w-0 flex-1 text-left"
                 >
                   <span className="font-semibold text-slate-900">{step.title}</span>
                   <span className="mt-0.5 block text-sm text-slate-500">{step.summary}</span>
                 </button>
 
-                <div className="flex items-center gap-3">
+                <div className="flex w-full items-center gap-3 sm:w-auto">
                   <Badge config={STEP_STATUS[step.status]} />
                   <label className="sr-only" htmlFor={`status-${step.id}`}>
                     Statut de l'étape {step.id}
@@ -73,7 +73,7 @@ export default function Dashboard() {
                     id={`status-${step.id}`}
                     value={step.status}
                     onChange={(e) => changeStatus(step, e.target.value)}
-                    className="rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-700"
+                    className="min-h-[44px] flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-base text-slate-700 sm:flex-none sm:text-sm"
                   >
                     {STEP_STATUS_ORDER.map((s) => (
                       <option key={s} value={s}>

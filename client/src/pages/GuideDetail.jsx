@@ -99,15 +99,15 @@ export default function GuideDetail() {
             label="Progression de la checklist"
           />
 
-          <ul className="mt-4 space-y-2.5">
+          <ul className="mt-4 space-y-1">
             {checklist.map((item) => (
               <li key={item.id}>
-                <label className="flex cursor-pointer items-start gap-2.5 text-sm">
+                <label className="flex cursor-pointer items-start gap-3 rounded-lg py-2 text-sm active:bg-slate-50">
                   <input
                     type="checkbox"
                     checked={item.done}
                     onChange={() => toggle(item)}
-                    className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-brand-600"
+                    className="mt-0.5 h-5 w-5 shrink-0 rounded border-slate-300 text-brand-600"
                   />
                   <span className={item.done ? 'text-slate-400 line-through' : 'text-slate-700'}>{item.label}</span>
                 </label>

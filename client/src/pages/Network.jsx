@@ -99,7 +99,7 @@ export default function Network() {
                 {Object.entries(active.details).map(([key, value]) => (
                   <div key={key}>
                     <dt className="text-xs font-medium uppercase tracking-wide text-slate-400">{key}</dt>
-                    <dd className="font-mono text-slate-700">{value}</dd>
+                    <dd className="break-words font-mono text-slate-700">{value}</dd>
                   </div>
                 ))}
               </dl>

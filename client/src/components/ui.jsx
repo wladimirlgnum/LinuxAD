@@ -47,8 +47,8 @@ export function ProgressBar({ value, label, className = '' }) {
 export function PageHeader({ title, subtitle, children }) {
   return (
     <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">{title}</h1>
+      <div className="min-w-0">
+        <h1 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">{title}</h1>
         {subtitle && <p className="mt-1 text-sm text-slate-500">{subtitle}</p>}
       </div>
       {children}
@@ -57,9 +57,9 @@ export function PageHeader({ title, subtitle, children }) {
 }
 
 /** Compteur de synthese (utilise en haut de la matrice logiciels). */
-export function StatCard({ label, value, tone = 'bg-slate-100 text-slate-700' }) {
+export function StatCard({ label, value, tone = 'bg-slate-100 text-slate-700', className = '' }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+    <div className={`rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm ${className}`}>
       <div className={`inline-flex rounded-md px-2 py-0.5 text-xs font-medium ${tone}`}>{label}</div>
       <div className="mt-1.5 text-2xl font-bold tabular-nums text-slate-900">{value}</div>
     </div>

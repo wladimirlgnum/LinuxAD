@@ -61,7 +61,7 @@ export default function Workstations() {
         <button
           type="button"
           onClick={() => setAdding(true)}
-          className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-700"
+          className="min-h-[44px] w-full rounded-lg bg-brand-600 px-4 text-sm font-medium text-white transition active:bg-brand-700 sm:w-auto lg:hover:bg-brand-700"
         >
           + Ajouter un poste
         </button>
@@ -76,18 +76,21 @@ export default function Workstations() {
       {adding && <AddForm onCancel={() => setAdding(false)} onSubmit={addWorkstation} />}
 
       <div className="grid gap-6 lg:grid-cols-[16rem_1fr] lg:items-start">
-        {/* Onglets verticaux : un par poste */}
-        <nav aria-label="Postes de travail" className="flex flex-col gap-2">
+        {/* Onglets : defilement horizontal sur mobile, colonne verticale sur desktop */}
+        <nav
+          aria-label="Postes de travail"
+          className="flex gap-2 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible lg:pb-0"
+        >
           {list.map((ws) => (
             <button
               key={ws.id}
               type="button"
               onClick={() => setActiveId(ws.id)}
               aria-current={ws.id === activeId ? 'true' : undefined}
-              className={`rounded-lg border px-4 py-3 text-left transition ${
+              className={`min-w-[11rem] shrink-0 rounded-lg border px-4 py-3 text-left transition active:bg-slate-50 lg:w-full lg:min-w-0 ${
                 ws.id === activeId
                   ? 'border-brand-300 bg-brand-50'
-                  : 'border-slate-200 bg-white hover:border-slate-300'
+                  : 'border-slate-200 bg-white lg:hover:border-slate-300'
               }`}
             >
               <span className="block font-medium text-slate-900">{ws.name}</span>
@@ -134,7 +137,7 @@ function WorkstationPanel({ ws, onSave, onDelete }) {
   useEffect(() => () => clearTimeout(notesTimer.current), []);
 
   return (
-    <Card className="p-6">
+    <Card className="p-5 sm:p-6">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold text-slate-900">{ws.name}</h2>
@@ -143,7 +146,7 @@ function WorkstationPanel({ ws, onSave, onDelete }) {
         <button
           type="button"
           onClick={() => onDelete(ws.id)}
-          className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-600 transition hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700"
+          className="min-h-[44px] rounded-lg border border-slate-300 px-3 text-sm text-slate-600 transition active:bg-rose-50 active:text-rose-700 lg:hover:border-rose-300 lg:hover:bg-rose-50 lg:hover:text-rose-700"
         >
           Supprimer le poste
         </button>
@@ -151,15 +154,15 @@ function WorkstationPanel({ ws, onSave, onDelete }) {
 
       <ProgressBar value={pct(ws)} label={`Progression du poste ${ws.name}`} />
 
-      <ul className="mt-5 space-y-2">
+      <ul className="mt-5 space-y-1">
         {ws.checklist.map((item) => (
-          <li key={item.id} className="group flex items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-slate-50">
-            <label className="flex flex-1 cursor-pointer items-center gap-3 text-sm">
+          <li key={item.id} className="group flex items-center gap-2 rounded-lg px-1 active:bg-slate-50 lg:hover:bg-slate-50">
+            <label className="flex flex-1 cursor-pointer items-center gap-3 py-2 text-sm">
               <input
                 type="checkbox"
                 checked={item.done}
                 onChange={() => toggle(item.id)}
-                className="h-4 w-4 rounded border-slate-300 text-brand-600"
+                className="h-5 w-5 shrink-0 rounded border-slate-300 text-brand-600"
               />
               <span className={item.done ? 'text-slate-400 line-through' : 'text-slate-700'}>{item.label}</span>
             </label>
@@ -167,7 +170,7 @@ function WorkstationPanel({ ws, onSave, onDelete }) {
               type="button"
               onClick={() => removeItem(item.id)}
               aria-label={`Supprimer l'étape ${item.label}`}
-              className="rounded px-2 text-slate-300 opacity-0 transition group-hover:opacity-100 hover:text-rose-600 focus:opacity-100"
+              className="grid h-11 w-11 shrink-0 place-items-center rounded text-lg text-slate-400 transition active:text-rose-600 lg:opacity-0 lg:group-hover:opacity-100 lg:hover:text-rose-600 lg:focus:opacity-100"
             >
               ×
             </button>
@@ -175,15 +178,18 @@ function WorkstationPanel({ ws, onSave, onDelete }) {
         ))}
       </ul>
 
-      <form onSubmit={addItem} className="mt-4 flex gap-2">
+      <form onSubmit={addItem} className="mt-4 flex flex-col gap-2 sm:flex-row">
         <input
           value={newItem}
           onChange={(e) => setNewItem(e.target.value)}
           placeholder="Ajouter une étape à la checklist…"
           aria-label="Nouvelle étape de checklist"
-          className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className="min-h-[44px] flex-1 rounded-lg border border-slate-300 px-3 py-2 text-base"
         />
-        <button type="submit" className="rounded-lg bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-900">
+        <button
+          type="submit"
+          className="min-h-[44px] rounded-lg bg-slate-800 px-4 text-sm font-medium text-white transition active:bg-slate-900 lg:hover:bg-slate-900"
+        >
           Ajouter
         </button>
       </form>
@@ -197,7 +203,7 @@ function WorkstationPanel({ ws, onSave, onDelete }) {
           value={notes}
           onChange={(e) => onNotesChange(e.target.value)}
           rows={4}
-          className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2 text-base"
           placeholder="Ex. : imprimante Sharp à reconfigurer, dossier partagé spécifique…"
         />
       </div>
@@ -217,30 +223,37 @@ function AddForm({ onCancel, onSubmit }) {
           e.preventDefault();
           if (name.trim()) onSubmit(name, role);
         }}
-        className="flex flex-wrap items-end gap-3"
+        className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end"
       >
-        <label className="text-sm">
+        <label className="w-full text-sm sm:w-auto">
           <span className="mb-1 block font-medium text-slate-700">Nom du poste / utilisateur</span>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
             autoFocus
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            className="min-h-[44px] w-full rounded-lg border border-slate-300 px-3 py-2 text-base sm:w-auto"
           />
         </label>
-        <label className="text-sm">
+        <label className="w-full text-sm sm:w-auto">
           <span className="mb-1 block font-medium text-slate-700">Service / rôle</span>
           <input
             value={role}
             onChange={(e) => setRole(e.target.value)}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            className="min-h-[44px] w-full rounded-lg border border-slate-300 px-3 py-2 text-base sm:w-auto"
           />
         </label>
-        <button type="submit" className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">
+        <button
+          type="submit"
+          className="min-h-[44px] w-full rounded-lg bg-brand-600 px-4 text-sm font-medium text-white transition active:bg-brand-700 sm:w-auto lg:hover:bg-brand-700"
+        >
           Créer
         </button>
-        <button type="button" onClick={onCancel} className="rounded-lg px-3 py-2 text-sm text-slate-600 hover:bg-slate-100">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="min-h-[44px] w-full rounded-lg px-3 text-sm text-slate-600 transition active:bg-slate-100 sm:w-auto lg:hover:bg-slate-100"
+        >
           Annuler
         </button>
       </form>
