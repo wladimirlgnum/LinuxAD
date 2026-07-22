@@ -5,6 +5,14 @@ import { Card, PageHeader, ProgressBar, StatCard, Loading, ErrorMessage } from '
 
 const pct = (ws) => (ws.checklist.length ? (ws.checklist.filter((i) => i.done).length / ws.checklist.length) * 100 : 0);
 
+// Styles de boutons réutilisés (accent = action principale, ghost = secondaire).
+const BTN_ACCENT =
+  'min-h-[44px] rounded-lg bg-accent px-4 font-mono text-sm font-semibold text-[#0a0a0f] transition active:brightness-95 lg:hover:brightness-110';
+const BTN_GHOST =
+  'min-h-[44px] rounded-lg border border-border px-4 font-mono text-sm font-medium text-fg transition active:bg-surface-hover lg:hover:border-border-strong lg:hover:text-accent';
+const INPUT =
+  'min-h-[44px] w-full rounded-lg border border-border bg-surface-2 px-3 py-2 text-base text-fg transition focus:border-border-strong';
+
 export default function Workstations() {
   const { data: list, setData: setList, loading, error } = useApi(api.getWorkstations, []);
   const [activeId, setActiveId] = useState(null);
@@ -55,22 +63,18 @@ export default function Workstations() {
   return (
     <>
       <PageHeader
-        title="Checklists de déploiement"
+        title="postes"
         subtitle="Suivi poste par poste de la migration vers Ubuntu"
       >
-        <button
-          type="button"
-          onClick={() => setAdding(true)}
-          className="min-h-[44px] w-full rounded-lg bg-brand-600 px-4 text-sm font-medium text-white transition active:bg-brand-700 sm:w-auto lg:hover:bg-brand-700"
-        >
+        <button type="button" onClick={() => setAdding(true)} className={`w-full sm:w-auto ${BTN_ACCENT}`}>
           + Ajouter un poste
         </button>
       </PageHeader>
 
       <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <StatCard label="Postes migrés" value={`${completed} / ${list.length}`} tone="bg-emerald-100 text-emerald-800" />
-        <StatCard label="En cours" value={list.filter((w) => pct(w) > 0 && pct(w) < 100).length} tone="bg-amber-100 text-amber-800" />
-        <StatCard label="Non démarrés" value={list.filter((w) => pct(w) === 0).length} tone="bg-slate-100 text-slate-700" />
+        <StatCard label="Postes migrés" value={`${completed} / ${list.length}`} tone="bg-[var(--success-quiet)] text-success" />
+        <StatCard label="En cours" value={list.filter((w) => pct(w) > 0 && pct(w) < 100).length} tone="bg-[var(--accent-quiet)] text-accent" />
+        <StatCard label="Non démarrés" value={list.filter((w) => pct(w) === 0).length} tone="bg-[var(--neutral-quiet)] text-muted" />
       </div>
 
       {adding && <AddForm onCancel={() => setAdding(false)} onSubmit={addWorkstation} />}
@@ -81,24 +85,34 @@ export default function Workstations() {
           aria-label="Postes de travail"
           className="flex gap-2 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible lg:pb-0"
         >
-          {list.map((ws) => (
-            <button
-              key={ws.id}
-              type="button"
-              onClick={() => setActiveId(ws.id)}
-              aria-current={ws.id === activeId ? 'true' : undefined}
-              className={`min-w-[11rem] shrink-0 rounded-lg border px-4 py-3 text-left transition active:bg-slate-50 lg:w-full lg:min-w-0 ${
-                ws.id === activeId
-                  ? 'border-brand-300 bg-brand-50'
-                  : 'border-slate-200 bg-white lg:hover:border-slate-300'
-              }`}
-            >
-              <span className="block font-medium text-slate-900">{ws.name}</span>
-              <span className="block text-xs text-slate-500">{ws.role}</span>
-              <ProgressBar className="mt-2" value={pct(ws)} label={`Progression du poste ${ws.name}`} />
-              <span className="mt-1 block text-xs tabular-nums text-slate-500">{Math.round(pct(ws))} %</span>
-            </button>
-          ))}
+          {list.map((ws) => {
+            const isActive = ws.id === activeId;
+            return (
+              <button
+                key={ws.id}
+                type="button"
+                onClick={() => setActiveId(ws.id)}
+                aria-current={isActive ? 'true' : undefined}
+                className={`relative min-w-[11rem] shrink-0 rounded-lg border px-4 py-3 text-left transition lg:w-full lg:min-w-0 ${
+                  isActive
+                    ? 'border-border-strong bg-[var(--accent-quiet)]'
+                    : 'border-border bg-surface active:bg-surface-hover lg:hover:border-border-strong'
+                }`}
+              >
+                {isActive && (
+                  <span
+                    className="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-accent lg:inset-y-3 lg:left-0 lg:right-auto lg:h-auto lg:w-0.5"
+                    style={{ boxShadow: 'var(--glow-accent)' }}
+                    aria-hidden="true"
+                  />
+                )}
+                <span className={`block font-mono font-medium ${isActive ? 'text-accent' : 'text-fg-strong'}`}>{ws.name}</span>
+                <span className="block text-xs text-muted">{ws.role}</span>
+                <ProgressBar className="mt-2" value={pct(ws)} label={`Progression du poste ${ws.name}`} />
+                <span className="mt-1 block font-mono text-xs tabular-nums text-muted">{Math.round(pct(ws))} %</span>
+              </button>
+            );
+          })}
         </nav>
 
         {active && <WorkstationPanel key={active.id} ws={active} onSave={save} onDelete={remove} />}
@@ -140,13 +154,13 @@ function WorkstationPanel({ ws, onSave, onDelete }) {
     <Card className="p-5 sm:p-6">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-slate-900">{ws.name}</h2>
-          <p className="text-sm text-slate-500">{ws.role}</p>
+          <h2 className="font-mono text-lg font-semibold text-fg-strong">{ws.name}</h2>
+          <p className="text-sm text-muted">{ws.role}</p>
         </div>
         <button
           type="button"
           onClick={() => onDelete(ws.id)}
-          className="min-h-[44px] rounded-lg border border-slate-300 px-3 text-sm text-slate-600 transition active:bg-rose-50 active:text-rose-700 lg:hover:border-rose-300 lg:hover:bg-rose-50 lg:hover:text-rose-700"
+          className="min-h-[44px] rounded-lg border border-border px-3 font-mono text-sm text-muted transition active:bg-[var(--danger-quiet)] active:text-danger lg:hover:border-[var(--danger)] lg:hover:bg-[var(--danger-quiet)] lg:hover:text-danger"
         >
           Supprimer le poste
         </button>
@@ -156,21 +170,21 @@ function WorkstationPanel({ ws, onSave, onDelete }) {
 
       <ul className="mt-5 space-y-1">
         {ws.checklist.map((item) => (
-          <li key={item.id} className="group flex items-center gap-2 rounded-lg px-1 active:bg-slate-50 lg:hover:bg-slate-50">
+          <li key={item.id} className="group flex items-center gap-2 rounded-lg px-1 transition active:bg-surface-hover lg:hover:bg-surface-hover">
             <label className="flex flex-1 cursor-pointer items-center gap-3 py-2 text-sm">
               <input
                 type="checkbox"
                 checked={item.done}
                 onChange={() => toggle(item.id)}
-                className="h-5 w-5 shrink-0 rounded border-slate-300 text-brand-600"
+                className="h-5 w-5 shrink-0 rounded border-border accent-accent"
               />
-              <span className={item.done ? 'text-slate-400 line-through' : 'text-slate-700'}>{item.label}</span>
+              <span className={item.done ? 'text-muted line-through opacity-60' : 'text-fg'}>{item.label}</span>
             </label>
             <button
               type="button"
               onClick={() => removeItem(item.id)}
               aria-label={`Supprimer l'étape ${item.label}`}
-              className="grid h-11 w-11 shrink-0 place-items-center rounded text-lg text-slate-400 transition active:text-rose-600 lg:opacity-0 lg:group-hover:opacity-100 lg:hover:text-rose-600 lg:focus:opacity-100"
+              className="grid h-11 w-11 shrink-0 place-items-center rounded text-lg text-muted transition active:text-danger lg:opacity-0 lg:group-hover:opacity-100 lg:hover:text-danger lg:focus:opacity-100"
             >
               ×
             </button>
@@ -184,18 +198,15 @@ function WorkstationPanel({ ws, onSave, onDelete }) {
           onChange={(e) => setNewItem(e.target.value)}
           placeholder="Ajouter une étape à la checklist…"
           aria-label="Nouvelle étape de checklist"
-          className="min-h-[44px] flex-1 rounded-lg border border-slate-300 px-3 py-2 text-base"
+          className={`flex-1 ${INPUT}`}
         />
-        <button
-          type="submit"
-          className="min-h-[44px] rounded-lg bg-slate-800 px-4 text-sm font-medium text-white transition active:bg-slate-900 lg:hover:bg-slate-900"
-        >
+        <button type="submit" className={BTN_GHOST}>
           Ajouter
         </button>
       </form>
 
       <div className="mt-6">
-        <label htmlFor="notes" className="text-xs font-bold uppercase tracking-wide text-slate-400">
+        <label htmlFor="notes" className="font-mono text-xs font-bold uppercase tracking-wide text-muted">
           Notes (problèmes rencontrés, spécificités)
         </label>
         <textarea
@@ -203,7 +214,7 @@ function WorkstationPanel({ ws, onSave, onDelete }) {
           value={notes}
           onChange={(e) => onNotesChange(e.target.value)}
           rows={4}
-          className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2 text-base"
+          className="mt-1.5 w-full rounded-lg border border-border bg-surface-2 px-3 py-2 text-base text-fg transition focus:border-border-strong"
           placeholder="Ex. : imprimante Sharp à reconfigurer, dossier partagé spécifique…"
         />
       </div>
@@ -226,34 +237,17 @@ function AddForm({ onCancel, onSubmit }) {
         className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end"
       >
         <label className="w-full text-sm sm:w-auto">
-          <span className="mb-1 block font-medium text-slate-700">Nom du poste / utilisateur</span>
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-            autoFocus
-            className="min-h-[44px] w-full rounded-lg border border-slate-300 px-3 py-2 text-base sm:w-auto"
-          />
+          <span className="mb-1 block font-mono font-medium text-fg">Nom du poste / utilisateur</span>
+          <input value={name} onChange={(e) => setName(e.target.value)} required autoFocus className={`sm:w-auto ${INPUT}`} />
         </label>
         <label className="w-full text-sm sm:w-auto">
-          <span className="mb-1 block font-medium text-slate-700">Service / rôle</span>
-          <input
-            value={role}
-            onChange={(e) => setRole(e.target.value)}
-            className="min-h-[44px] w-full rounded-lg border border-slate-300 px-3 py-2 text-base sm:w-auto"
-          />
+          <span className="mb-1 block font-mono font-medium text-fg">Service / rôle</span>
+          <input value={role} onChange={(e) => setRole(e.target.value)} className={`sm:w-auto ${INPUT}`} />
         </label>
-        <button
-          type="submit"
-          className="min-h-[44px] w-full rounded-lg bg-brand-600 px-4 text-sm font-medium text-white transition active:bg-brand-700 sm:w-auto lg:hover:bg-brand-700"
-        >
+        <button type="submit" className={`w-full sm:w-auto ${BTN_ACCENT}`}>
           Créer
         </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="min-h-[44px] w-full rounded-lg px-3 text-sm text-slate-600 transition active:bg-slate-100 sm:w-auto lg:hover:bg-slate-100"
-        >
+        <button type="button" onClick={onCancel} className={`w-full sm:w-auto ${BTN_GHOST}`}>
           Annuler
         </button>
       </form>

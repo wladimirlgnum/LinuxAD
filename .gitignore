@@ -2,6 +2,9 @@ node_modules/
 dist/
 *.log
 
+# Outillage local Claude Code (skills, etc.) — pas nécessaire dans le repo
+.claude/
+
 # Variables d'environnement (identifiants Supabase)
 .env
 .env.*

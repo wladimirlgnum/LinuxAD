@@ -57,7 +57,7 @@ export default function Software() {
   return (
     <>
       <PageHeader
-        title="Matrice logiciels Windows → Linux"
+        title="logiciels"
         subtitle={`${software.length} logiciels issus de l'audit du parc`}
       />
 
@@ -67,7 +67,7 @@ export default function Software() {
           <StatCard
             key={c.key}
             className="min-w-[9rem] shrink-0 sm:min-w-0"
-            label={`${c.icon} ${c.label}`}
+            label={c.label}
             value={c.value}
             tone={c.badge}
           />
@@ -82,7 +82,7 @@ export default function Software() {
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Rechercher un logiciel…"
           aria-label="Rechercher un logiciel"
-          className="min-h-[44px] w-full rounded-lg border border-slate-300 px-3 py-2 text-base"
+          className="min-h-[44px] w-full rounded-lg border border-border bg-surface-2 px-3 py-2 text-base text-fg transition focus:border-border-strong"
         />
         {/* Selects : defilement horizontal sur mobile, retour a la ligne sur tablette+ */}
         <div className="mt-3 flex gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible sm:pb-0">
@@ -101,7 +101,7 @@ export default function Software() {
       <Card className="hidden overflow-x-auto md:block">
         <table className="w-full min-w-3xl text-sm">
           <caption className="sr-only">Correspondance des logiciels Windows vers leurs alternatives Linux</caption>
-          <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+          <thead className="bg-surface-2 text-left font-mono text-xs uppercase tracking-wide text-muted">
             <tr>
               <th scope="col" className="px-4 py-3 font-semibold">Logiciel Windows</th>
               <th scope="col" className="px-4 py-3 font-semibold">Éditeur</th>
@@ -112,21 +112,21 @@ export default function Software() {
               <th scope="col" className="px-4 py-3 font-semibold">Statut migration</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-border">
             {filtered.map((s) => (
-              <tr key={s.id} className="lg:hover:bg-slate-50">
-                <td className="px-4 py-3 font-medium text-slate-900">{s.windows}</td>
-                <td className="px-4 py-3 text-slate-500">{s.vendor}</td>
-                <td className="px-4 py-3 text-slate-600">{s.category}</td>
-                <td className="px-4 py-3 text-slate-600">{s.users.join(', ')}</td>
+              <tr key={s.id} className="transition even:bg-surface-2/60 lg:hover:bg-surface-hover">
+                <td className="px-4 py-3 font-medium text-fg-strong">{s.windows}</td>
+                <td className="px-4 py-3 text-muted">{s.vendor}</td>
+                <td className="px-4 py-3 text-fg">{s.category}</td>
+                <td className="px-4 py-3 text-fg">{s.users.join(', ')}</td>
                 <td className="px-4 py-3">
                   {s.critical ? (
-                    <span className="text-rose-600" title="Usage critique">●</span>
+                    <span className="text-danger" title="Usage critique">●</span>
                   ) : (
-                    <span className="text-slate-300">○</span>
+                    <span className="text-muted opacity-40">○</span>
                   )}
                 </td>
-                <td className="px-4 py-3 text-slate-700">{s.linux}</td>
+                <td className="px-4 py-3 text-fg">{s.linux}</td>
                 <td className="px-4 py-3">
                   <label className="sr-only" htmlFor={`st-${s.id}`}>
                     Statut de migration de {s.windows}
@@ -135,11 +135,11 @@ export default function Software() {
                     id={`st-${s.id}`}
                     value={s.status}
                     onChange={(e) => changeStatus(s, e.target.value)}
-                    className={`rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset ${SOFTWARE_STATUS[s.status].badge}`}
+                    className={`rounded-full px-2.5 py-1 font-mono text-xs font-medium ring-1 ring-inset ${SOFTWARE_STATUS[s.status].badge}`}
                   >
                     {SOFTWARE_STATUS_ORDER.map((k) => (
                       <option key={k} value={k}>
-                        {SOFTWARE_STATUS[k].icon} {SOFTWARE_STATUS[k].label}
+                        {SOFTWARE_STATUS[k].label}
                       </option>
                     ))}
                   </select>
@@ -159,7 +159,7 @@ export default function Software() {
 
       {filtered.length === 0 && (
         <Card className="mt-3 p-4 md:mt-0">
-          <p className="py-6 text-center text-sm text-slate-500">Aucun logiciel ne correspond aux filtres.</p>
+          <p className="py-6 text-center text-sm text-muted">Aucun logiciel ne correspond aux filtres.</p>
         </Card>
       )}
     </>
@@ -172,26 +172,26 @@ function SoftwareCard({ s, onChange }) {
     <Card className="p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h3 className="font-semibold text-slate-900">{s.windows}</h3>
-          <p className="mt-0.5 text-xs text-slate-500">
+          <h3 className="font-mono font-semibold text-fg-strong">{s.windows}</h3>
+          <p className="mt-0.5 text-xs text-muted">
             {s.vendor} · {s.category}
           </p>
         </div>
         {s.critical ? (
-          <span className="shrink-0 text-rose-600" title="Usage critique" aria-label="Usage critique">●</span>
+          <span className="shrink-0 text-danger" title="Usage critique" aria-label="Usage critique">●</span>
         ) : (
-          <span className="shrink-0 text-slate-300" aria-label="Non critique">○</span>
+          <span className="shrink-0 text-muted opacity-40" aria-label="Non critique">○</span>
         )}
       </div>
 
       <dl className="mt-3 space-y-1.5 text-sm">
         <div className="flex justify-between gap-3">
-          <dt className="shrink-0 text-slate-500">Utilisateurs</dt>
-          <dd className="text-right text-slate-700">{s.users.join(', ')}</dd>
+          <dt className="shrink-0 text-muted">Utilisateurs</dt>
+          <dd className="text-right text-fg">{s.users.join(', ')}</dd>
         </div>
         <div className="flex justify-between gap-3">
-          <dt className="shrink-0 text-slate-500">Alternative Linux</dt>
-          <dd className="text-right text-slate-700">{s.linux}</dd>
+          <dt className="shrink-0 text-muted">Alternative Linux</dt>
+          <dd className="text-right text-fg">{s.linux}</dd>
         </div>
       </dl>
 
@@ -202,11 +202,11 @@ function SoftwareCard({ s, onChange }) {
         id={`stm-${s.id}`}
         value={s.status}
         onChange={(e) => onChange(s, e.target.value)}
-        className={`mt-3 min-h-[44px] w-full rounded-lg px-3 py-2 text-base font-medium ring-1 ring-inset ${SOFTWARE_STATUS[s.status].badge}`}
+        className={`mt-3 min-h-[44px] w-full rounded-lg px-3 py-2 font-mono text-base font-medium ring-1 ring-inset ${SOFTWARE_STATUS[s.status].badge}`}
       >
         {SOFTWARE_STATUS_ORDER.map((k) => (
           <option key={k} value={k}>
-            {SOFTWARE_STATUS[k].icon} {SOFTWARE_STATUS[k].label}
+            {SOFTWARE_STATUS[k].label}
           </option>
         ))}
       </select>
@@ -226,7 +226,7 @@ function Select({ label, value, onChange, options }) {
         value={value}
         onChange={(e) => onChange(e.target.value)}
         aria-label={label}
-        className="min-h-[44px] rounded-lg border border-slate-300 bg-white px-3 py-2 text-base text-slate-700 sm:text-sm"
+        className="min-h-[44px] rounded-lg border border-border bg-surface-2 px-3 py-2 text-base text-fg transition focus:border-border-strong sm:text-sm"
       >
         <option value="all">{label} : toutes</option>
         {items.map(([v, l]) => (

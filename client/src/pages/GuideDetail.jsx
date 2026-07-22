@@ -19,8 +19,8 @@ export default function GuideDetail() {
   if (!guide) {
     return (
       <div className="py-16 text-center">
-        <p className="text-slate-600">Le guide de l'étape {stepId} n'a pas encore été rédigé.</p>
-        <Link to="/guides" className="mt-2 inline-block text-sm text-brand-600 underline">
+        <p className="text-muted">Le guide de l'étape {stepId} n'a pas encore été rédigé.</p>
+        <Link to="/guides" className="mt-2 inline-block font-mono text-sm text-accent underline">
           ← Retour aux guides
         </Link>
       </div>
@@ -56,14 +56,14 @@ export default function GuideDetail() {
       <ul className="mt-4 space-y-1">
         {checklist.map((item) => (
           <li key={item.id}>
-            <label className="flex min-h-[44px] cursor-pointer items-start gap-3 rounded-lg py-2 text-base active:bg-slate-50 lg:text-sm">
+            <label className="flex min-h-[44px] cursor-pointer items-start gap-3 rounded-lg py-2 text-base transition active:bg-surface-hover lg:text-sm">
               <input
                 type="checkbox"
                 checked={item.done}
                 onChange={() => toggle(item)}
-                className="mt-0.5 h-5 w-5 shrink-0 rounded border-slate-300 text-brand-600"
+                className="mt-0.5 h-5 w-5 shrink-0 rounded border-border accent-accent"
               />
-              <span className={item.done ? 'text-slate-400 line-through' : 'text-slate-700'}>{item.label}</span>
+              <span className={item.done ? 'text-muted line-through opacity-60' : 'text-fg'}>{item.label}</span>
             </label>
           </li>
         ))}
@@ -73,22 +73,22 @@ export default function GuideDetail() {
 
   return (
     <>
-      <Link to="/guides" className="mb-4 inline-block text-sm text-brand-600 lg:hover:underline">
+      <Link to="/guides" className="mb-4 inline-block font-mono text-sm text-accent lg:hover:underline">
         ← Tous les guides
       </Link>
 
-      <PageHeader title={`Étape ${stepId} — ${guide.title}`} />
+      <PageHeader title={`étape ${stepId} — ${guide.title}`} />
 
       <div className="grid gap-6 lg:grid-cols-[1fr_18rem] lg:items-start">
         {/* min-w-0 : indispensable pour que les <pre> defilent au lieu d'elargir la colonne */}
         <div className="min-w-0 space-y-6">
           {/* Objectif et prerequis */}
           <Card className="p-5">
-            <h2 className="text-xs font-bold uppercase tracking-wide text-brand-600">Objectif</h2>
-            <p className="mt-1.5 break-words text-slate-700">{guide.objective}</p>
+            <h2 className="font-mono text-xs font-bold uppercase tracking-wide text-accent">Objectif</h2>
+            <p className="mt-1.5 break-words text-fg">{guide.objective}</p>
 
-            <h2 className="mt-5 text-xs font-bold uppercase tracking-wide text-brand-600">Prérequis</h2>
-            <ul className="mt-1.5 list-disc space-y-1 pl-5 text-base text-slate-600 lg:text-sm">
+            <h2 className="mt-5 font-mono text-xs font-bold uppercase tracking-wide text-accent">Prérequis</h2>
+            <ul className="mt-1.5 list-disc space-y-1 pl-5 text-base text-muted lg:text-sm">
               {guide.prerequisites.map((p) => (
                 <li key={p} className="break-words">{p}</li>
               ))}
@@ -98,18 +98,22 @@ export default function GuideDetail() {
           {/* Sections du guide */}
           {guide.sections.map((section) => (
             <Card key={section.title} className="p-5">
-              <h2 className="mb-3 break-words text-lg font-semibold text-slate-900">{section.title}</h2>
+              <h2 className="mb-3 break-words font-mono text-lg font-semibold text-fg-strong">{section.title}</h2>
               {section.blocks.map((block, i) => {
                 if (block.type === 'code') return <CodeBlock key={i} code={block.code} lang={block.lang} />;
                 if (block.type === 'note')
                   return (
-                    <p key={i} className="my-3 break-words rounded-lg border-l-4 border-amber-400 bg-amber-50 px-4 py-3 text-base text-amber-900 lg:text-sm">
-                      <strong className="font-semibold">À noter — </strong>
+                    <p
+                      key={i}
+                      className="glass my-3 break-words rounded-lg border-l-4 border-accent px-4 py-3 text-base text-fg lg:text-sm"
+                      style={{ background: 'var(--accent-quiet)' }}
+                    >
+                      <strong className="font-semibold text-accent">À noter — </strong>
                       {block.content}
                     </p>
                   );
                 return (
-                  <p key={i} className="my-2 break-words leading-relaxed text-slate-700">
+                  <p key={i} className="my-2 break-words leading-relaxed text-fg">
                     {block.content}
                   </p>
                 );
@@ -120,8 +124,8 @@ export default function GuideDetail() {
 
         {/* Checklist — desktop : sidebar collante (comportement d'origine, masquee sous lg) */}
         <Card className="hidden p-5 lg:sticky lg:top-24 lg:block">
-          <span className="block font-semibold text-slate-900">Checklist de fin d'étape</span>
-          <span className="mt-1 block text-sm text-slate-500">
+          <span className="block font-mono font-semibold text-fg-strong">Checklist de fin d'étape</span>
+          <span className="mt-1 block text-sm text-muted">
             {doneCount} / {checklist.length} validés
           </span>
           {progressAndList}
@@ -135,20 +139,20 @@ export default function GuideDetail() {
           type="button"
           onClick={() => setChecklistOpen(true)}
           aria-label="Ouvrir la checklist de fin d'étape"
-          className="fixed right-4 z-40 flex min-h-[48px] items-center gap-2 rounded-full bg-brand-600 px-5 font-semibold text-white shadow-lg transition active:scale-95"
-          style={{ bottom: 'calc(4.5rem + env(safe-area-inset-bottom))' }}
+          className="fixed right-4 z-40 flex min-h-[48px] items-center gap-2 rounded-full bg-accent px-5 font-mono font-semibold text-[#0a0a0f] transition active:scale-95"
+          style={{ bottom: 'calc(4.5rem + env(safe-area-inset-bottom))', boxShadow: 'var(--glow-accent)' }}
         >
           <span>Checklist</span>
-          <span className="rounded-full bg-white/20 px-2 py-0.5 text-sm tabular-nums">
+          <span className="rounded-full bg-black/20 px-2 py-0.5 text-sm tabular-nums">
             {doneCount}/{checklist.length} ✓
           </span>
         </button>
 
-        {/* Overlay semi-transparent */}
+        {/* Overlay semi-transparent (scrim) */}
         <div
           onClick={() => setChecklistOpen(false)}
           aria-hidden="true"
-          className={`fixed inset-0 z-40 bg-slate-900/50 transition-opacity duration-300 ${
+          className={`fixed inset-0 z-40 bg-black/60 transition-opacity duration-300 ${
             checklistOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
           }`}
         />
@@ -158,14 +162,15 @@ export default function GuideDetail() {
           role="dialog"
           aria-modal="true"
           aria-label="Checklist de fin d'étape"
-          className={`fixed inset-x-0 bottom-0 z-50 flex max-h-[60vh] flex-col rounded-t-2xl bg-white shadow-2xl transition-transform duration-300 ease-out ${
+          className={`glass fixed inset-x-0 bottom-0 z-50 flex max-h-[60vh] flex-col rounded-t-2xl border-t border-border transition-transform duration-300 ease-out ${
             checklistOpen ? 'translate-y-0' : 'translate-y-full'
           }`}
+          style={{ boxShadow: 'var(--shadow-card)' }}
         >
-          <div className="flex shrink-0 items-center justify-between border-b border-slate-200 px-5 py-4">
+          <div className="flex shrink-0 items-center justify-between border-b border-border px-5 py-4">
             <div>
-              <span className="block font-semibold text-slate-900">Checklist</span>
-              <span className="mt-0.5 block text-sm text-slate-500">
+              <span className="block font-mono font-semibold text-fg-strong">Checklist</span>
+              <span className="mt-0.5 block text-sm text-muted">
                 {doneCount} / {checklist.length} validés
               </span>
             </div>
@@ -173,7 +178,7 @@ export default function GuideDetail() {
               type="button"
               onClick={() => setChecklistOpen(false)}
               aria-label="Fermer la checklist"
-              className="grid h-10 w-10 shrink-0 place-items-center rounded-lg text-xl text-slate-500 active:bg-slate-100"
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-lg text-xl text-muted transition active:bg-surface-hover"
             >
               ✕
             </button>

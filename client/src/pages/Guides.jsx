@@ -5,6 +5,13 @@ import { GUIDES } from '../data/guides.js';
 import { STEP_STATUS } from '../constants.js';
 import { Card, Badge, PageHeader, Loading, ErrorMessage } from '../components/ui.jsx';
 
+// Couleur de la bordure gauche des cartes selon le statut (tokens de la DA).
+const STATUS_COLOR = {
+  done: 'var(--success)',
+  in_progress: 'var(--accent)',
+  todo: 'var(--neutral)',
+};
+
 export default function Guides() {
   const { data: steps, loading, error } = useApi(api.getProgress, []);
 
@@ -14,7 +21,7 @@ export default function Guides() {
   return (
     <>
       <PageHeader
-        title="Guides étape par étape"
+        title="guides"
         subtitle="Commandes, explications et tests de validation pour chaque étape du projet"
       />
 
@@ -23,24 +30,34 @@ export default function Guides() {
           const available = Boolean(GUIDES[step.id]);
 
           return (
-            <Card key={step.id} className={`p-5 ${available ? 'transition active:border-brand-300 lg:hover:border-brand-300 lg:hover:shadow-md' : 'opacity-60'}`}>
-              <div className="mb-2 flex items-start justify-between gap-3">
-                <span className="text-xs font-bold uppercase tracking-wide text-slate-400">Étape {step.id}</span>
-                <Badge config={STEP_STATUS[step.status]} />
-              </div>
+            <Card
+              key={step.id}
+              className={`p-5 ${available ? 'transition active:border-border-strong lg:hover:border-border-strong' : 'opacity-60'}`}
+            >
+              <div
+                className="-mx-5 -mt-5 mb-4 border-l-[3px] px-5 pt-5"
+                style={{ borderLeftColor: STATUS_COLOR[step.status] }}
+              >
+                <div className="mb-2 flex items-start justify-between gap-3">
+                  <span className="font-mono text-xs font-bold uppercase tracking-wide text-muted">
+                    Étape {String(step.id).padStart(2, '0')}
+                  </span>
+                  <Badge config={STEP_STATUS[step.status]} />
+                </div>
 
-              <h2 className="font-semibold text-slate-900">{step.title}</h2>
-              <p className="mt-1 text-sm text-slate-500">{step.summary}</p>
+                <h2 className="font-mono font-semibold text-fg-strong">{step.title}</h2>
+                <p className="mt-1 text-sm text-muted">{step.summary}</p>
+              </div>
 
               {available ? (
                 <Link
                   to={`/guides/${step.id}`}
-                  className="mt-4 inline-flex min-h-[44px] items-center rounded-lg bg-brand-600 px-4 text-sm font-medium text-white transition active:bg-brand-700 lg:hover:bg-brand-700"
+                  className="inline-flex min-h-[44px] items-center rounded-lg bg-accent px-4 font-mono text-sm font-semibold text-[#0a0a0f] transition active:brightness-95 lg:hover:brightness-110"
                 >
                   Ouvrir le guide →
                 </Link>
               ) : (
-                <p className="mt-4 text-sm italic text-slate-400">Guide à rédiger</p>
+                <p className="text-sm italic text-muted">Guide à rédiger</p>
               )}
             </Card>
           );

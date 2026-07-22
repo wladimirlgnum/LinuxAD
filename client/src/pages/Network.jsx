@@ -3,11 +3,11 @@ import { NETWORK } from '../data/network.js';
 import { STEP_STATUS } from '../constants.js';
 import { Card, Badge, PageHeader } from '../components/ui.jsx';
 
-// Couleurs de remplissage des noeuds selon leur statut de configuration.
-const FILL = {
-  done: { box: '#ecfdf5', stroke: '#10b981' },
-  in_progress: { box: '#fffbeb', stroke: '#f59e0b' },
-  todo: { box: '#f8fafc', stroke: '#94a3b8' },
+// Couleur d'accent des noeuds selon leur statut de configuration (tokens de la DA).
+const STATUS_COLOR = {
+  done: 'var(--success)', // teal = configuré
+  in_progress: 'var(--accent)', // ambre = en cours
+  todo: 'var(--neutral)', // gris = à faire
 };
 
 // Positions des noeuds dans le viewBox SVG (800 x 560).
@@ -27,20 +27,20 @@ export default function Network() {
   return (
     <>
       <PageHeader
-        title="Schéma réseau"
+        title="reseau"
         subtitle="Survolez ou sélectionnez une machine pour afficher ses informations"
       />
 
       <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
         <Card className="p-4">
           <svg viewBox="0 0 800 560" className="h-auto w-full" role="img" aria-label="Architecture réseau de la maquette">
-            {/* Liaisons entre les machines, avec les adresses d'interface */}
-            <g stroke="#cbd5e1" strokeWidth="2">
+            {/* Liaisons animées entre les machines */}
+            <g className="net-link" fill="none">
               <line x1="400" y1="80" x2="400" y2="150" />
               <line x1="400" y1="240" x2="400" y2="310" />
               <line x1="400" y1="400" x2="400" y2="460" />
             </g>
-            <g fontSize="12" fill="#64748b" fontFamily="ui-monospace, monospace">
+            <g fontSize="12" fontFamily="'JetBrains Mono', ui-monospace, monospace" style={{ fill: 'var(--muted)' }}>
               <text x="412" y="118">eno1 — 192.168.10.70</text>
               <text x="412" y="278">enx… — 192.168.100.1</text>
               <text x="412" y="435">192.168.100.0/24</text>
@@ -48,7 +48,7 @@ export default function Network() {
 
             {nodes.map((node) => {
               const p = POS[node.id];
-              const c = FILL[node.status];
+              const color = STATUS_COLOR[node.status];
               const isActive = selected === node.id;
 
               return (
@@ -69,43 +69,55 @@ export default function Network() {
                     width={p.w}
                     height={p.h}
                     rx="12"
-                    fill={c.box}
-                    stroke={isActive ? '#4f46e5' : c.stroke}
                     strokeWidth={isActive ? 3 : 2}
+                    style={{
+                      fill: 'var(--surface-2)',
+                      stroke: color,
+                      filter: `drop-shadow(0 0 ${isActive ? 12 : 5}px ${color})`,
+                      transition: 'filter 150ms ease',
+                    }}
                   />
-                  <text x={p.x + p.w / 2} y={p.y + p.h / 2 - 4} textAnchor="middle" fontSize="15" fontWeight="600" fill="#0f172a">
+                  <text
+                    x={p.x + p.w / 2}
+                    y={p.y + p.h / 2 - 4}
+                    textAnchor="middle"
+                    fontSize="15"
+                    fontWeight="600"
+                    fontFamily="'JetBrains Mono', ui-monospace, monospace"
+                    style={{ fill: 'var(--fg-strong)' }}
+                  >
                     {node.label}
                   </text>
-                  <text x={p.x + p.w / 2} y={p.y + p.h / 2 + 16} textAnchor="middle" fontSize="12" fill="#64748b">
+                  <text x={p.x + p.w / 2} y={p.y + p.h / 2 + 16} textAnchor="middle" fontSize="12" style={{ fill: 'var(--muted)' }}>
                     {node.subtitle}
                   </text>
-                  {/* Pastille de statut en haut a droite du noeud */}
-                  <circle cx={p.x + p.w - 14} cy={p.y + 14} r="5" fill={c.stroke} />
+                  {/* Pastille de statut en haut à droite du noeud */}
+                  <circle cx={p.x + p.w - 14} cy={p.y + 14} r="5" style={{ fill: color }} />
                 </g>
               );
             })}
           </svg>
         </Card>
 
-        {/* Panneau lateral : infos de la machine survolee ou selectionnee */}
+        {/* Panneau latéral : infos de la machine survolée ou sélectionnée */}
         <Card className="h-fit p-5">
           {active ? (
             <>
               <div className="mb-3 flex items-center justify-between gap-2">
-                <h2 className="font-semibold text-slate-900">{active.label}</h2>
+                <h2 className="font-mono font-semibold text-fg-strong">{active.label}</h2>
                 <Badge config={STEP_STATUS[active.status]} />
               </div>
               <dl className="space-y-2 text-sm">
                 {Object.entries(active.details).map(([key, value]) => (
                   <div key={key}>
-                    <dt className="text-xs font-medium uppercase tracking-wide text-slate-400">{key}</dt>
-                    <dd className="break-words font-mono text-slate-700">{value}</dd>
+                    <dt className="font-mono text-xs font-medium uppercase tracking-wide text-muted">{key}</dt>
+                    <dd className="break-words font-mono text-fg">{value}</dd>
                   </div>
                 ))}
               </dl>
             </>
           ) : (
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-muted">
               Sélectionnez une machine du schéma pour afficher son adresse IP, son rôle et ses services.
             </p>
           )}

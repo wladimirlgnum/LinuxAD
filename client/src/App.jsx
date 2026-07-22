@@ -26,8 +26,8 @@ export default function App() {
 function NotFound() {
   return (
     <div className="py-20 text-center">
-      <p className="text-lg font-semibold text-slate-900">Page introuvable</p>
-      <Link to="/" className="mt-2 inline-block text-sm text-brand-600 underline">
+      <p className="font-mono text-lg font-semibold text-fg-strong">404 — Page introuvable</p>
+      <Link to="/" className="mt-2 inline-block font-mono text-sm text-accent underline">
         Retour au tableau de bord
       </Link>
     </div>
