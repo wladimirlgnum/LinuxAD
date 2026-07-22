@@ -948,4 +948,145 @@ exit`,
       },
     ],
   },
+  7: {
+    title: 'Validation complète',
+    objective:
+      "Vérifier bout en bout que toute la chaîne fonctionne depuis un poste client joint au domaine — DNS, Kerberos, partages, permissions et authentification multi-utilisateurs.",
+    prerequisites: [
+      'Étape 6 terminée : le poste client ubuntu-usr est joint au domaine lgnum.local.',
+    ],
+    sections: [
+      {
+        title: '1. Validation DNS',
+        blocks: [
+          {
+            type: 'text',
+            content: 'Objectif : vérifier que le poste client résout les noms du domaine.',
+          },
+          {
+            type: 'code',
+            code: `host lgnum.local
+host srvad.lgnum.local
+host -t SRV _ldap._tcp.lgnum.local`,
+          },
+          {
+            type: 'note',
+            content:
+              'Résultats attendus : host lgnum.local → 192.168.100.2 ; host srvad.lgnum.local → 192.168.100.2 ; host -t SRV _ldap._tcp.lgnum.local → enregistrement SRV pointant vers srvad.lgnum.local sur le port 389.',
+          },
+          {
+            type: 'text',
+            content:
+              'Ces trois tests vérifient que le poste trouve le DC via DNS. Le premier résout le domaine, le second le nom du serveur, le troisième l\'enregistrement de service LDAP que les postes utilisent pour localiser automatiquement le contrôleur de domaine.',
+          },
+        ],
+      },
+      {
+        title: '2. Validation Kerberos',
+        blocks: [
+          {
+            type: 'text',
+            content:
+              'Objectif : vérifier que l\'authentification Kerberos fonctionne depuis le client.',
+          },
+          { type: 'code', code: `kinit wladimir@LGNUM.LOCAL
+klist` },
+          {
+            type: 'note',
+            content:
+              'kinit doit revenir sans erreur après saisie du mot de passe. klist doit afficher un ticket pour krbtgt/LGNUM.LOCAL@LGNUM.LOCAL avec les dates de validité.',
+          },
+          {
+            type: 'text',
+            content:
+              'kinit demande un ticket TGT au KDC (le serveur Samba). Si ça fonctionne depuis le client, ça prouve que la communication Kerberos traverse le réseau correctement. Le realm doit être en MAJUSCULES.',
+          },
+          {
+            type: 'note',
+            content:
+              'Le message "Your password will expire in X days" est normal — c\'est la politique de mot de passe par défaut de l\'AD.',
+          },
+        ],
+      },
+      {
+        title: '3. Validation des partages réseau',
+        blocks: [
+          {
+            type: 'text',
+            content: 'Objectif : vérifier l\'accès aux partages Samba depuis le client.',
+          },
+          {
+            type: 'text',
+            content: 'Prérequis : installer smbclient sur le client si pas encore fait :',
+          },
+          { type: 'code', code: `sudo apt install -y smbclient` },
+          {
+            type: 'code',
+            code: `smbclient -L //srvad.lgnum.local -U wladimir@lgnum.local
+smbclient //srvad.lgnum.local/LGNUM -U wladimir@lgnum.local -c "ls"
+smbclient //srvad.lgnum.local/SI -U wladimir@lgnum.local -c "mkdir test-validation; ls; rmdir test-validation"`,
+          },
+          {
+            type: 'note',
+            content:
+              'Résultats attendus : le premier liste tous les partages (LGNUM, RH, SI, dossier personnel) ; le deuxième liste le contenu du partage commun (lecture) ; le troisième crée, liste et supprime un dossier (écriture).',
+          },
+          {
+            type: 'text',
+            content:
+              'Le premier test vérifie la visibilité des partages, le second la lecture, le troisième l\'écriture et la suppression. Le message "SMB1 disabled" est normal.',
+          },
+        ],
+      },
+      {
+        title: '4. Validation de l\'isolation des permissions',
+        blocks: [
+          {
+            type: 'text',
+            content:
+              'Objectif : vérifier qu\'un utilisateur n\'a PAS accès aux partages auxquels il n\'appartient pas.',
+          },
+          {
+            type: 'code',
+            code: `smbclient //srvad.lgnum.local/RH -U wladimir@lgnum.local -c "ls"`,
+          },
+          {
+            type: 'note',
+            content: 'Résultat attendu : NT_STATUS_ACCESS_DENIED — c\'est le comportement voulu.',
+          },
+          {
+            type: 'text',
+            content:
+              'Le compte wladimir est dans le groupe Informatique, pas dans RH. L\'accès refusé prouve que l\'isolation par groupe fonctionne. C\'est le même mécanisme que les permissions NTFS sous Windows.',
+          },
+        ],
+      },
+      {
+        title: '5. Validation multi-utilisateurs',
+        blocks: [
+          {
+            type: 'text',
+            content: 'Objectif : vérifier qu\'un autre utilisateur AD peut se connecter sur le poste.',
+          },
+          {
+            type: 'code',
+            code: `su - fabrice@lgnum.local
+whoami
+pwd
+exit`,
+          },
+          {
+            type: 'note',
+            content:
+              'Résultats attendus : whoami → fabrice@lgnum.local ; pwd → /home/fabrice@lgnum.local (créé automatiquement).',
+          },
+          {
+            type: 'text',
+            content:
+              'Ce test confirme que l\'authentification AD fonctionne pour tous les utilisateurs, pas seulement pour le premier testé. Le home est créé automatiquement grâce au module PAM mkhomedir configuré à l\'étape 6.',
+          },
+        ],
+      },
+    ],
+  },
 };
