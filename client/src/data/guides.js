@@ -593,4 +593,197 @@ sudo samba-tool group listmembers "Informatique"`,
       },
     ],
   },
+  5: {
+    title: 'Partages de fichiers réseau',
+    objective:
+      "Créer les partages Samba sur le DC pour reproduire l'arborescence de fichiers existante (lecteurs Z: et Y: sous Windows).",
+    prerequisites: [
+      'Étape 4 terminée : les comptes et groupes AD sont créés.',
+    ],
+    sections: [
+      {
+        title: '1. Installation de libnss-winbind',
+        blocks: [
+          {
+            type: 'text',
+            content:
+              'Objectif : permettre à Linux de voir les groupes et utilisateurs AD pour gérer les permissions fichiers.',
+          },
+          { type: 'code', code: `sudo apt install libnss-winbind -y` },
+          { type: 'text', content: 'Puis éditer /etc/nsswitch.conf :' },
+          { type: 'code', code: `sudo nano /etc/nsswitch.conf` },
+          {
+            type: 'note',
+            content:
+              'Remplacer `passwd: files systemd` par `passwd: files systemd winbind` et `group: files systemd` par `group: files systemd winbind`.',
+          },
+          {
+            type: 'text',
+            content: 'Ajouter dans la section [global] de /etc/samba/smb.conf :',
+          },
+          {
+            type: 'code',
+            lang: 'conf',
+            code: `idmap_ldb:use rfc2307 = yes
+winbind nss info = rfc2307
+winbind enum users = yes
+winbind enum groups = yes`,
+          },
+          { type: 'code', code: `sudo systemctl restart samba-ad-dc` },
+          { type: 'text', content: 'Validation :' },
+          { type: 'code', code: `getent group "Domain Users"` },
+          { type: 'note', content: 'Doit retourner le groupe avec son GID.' },
+          {
+            type: 'text',
+            content:
+              'Sans libnss-winbind, Linux ne sait pas résoudre les noms de groupes AD. Les commandes chown avec des groupes comme "Domain Users" échoueraient avec "groupe invalide". Le module NSS fait le pont entre le système Linux et l\'annuaire Samba.',
+          },
+          {
+            type: 'note',
+            content:
+              "Le service winbind standalone ne démarre pas en mode AD DC (status: inactive, exec-condition) — c'est normal. Winbind tourne à l'intérieur du processus samba lui-même. wbinfo -g fonctionne quand même.",
+          },
+        ],
+      },
+      {
+        title: "2. Création de l'arborescence",
+        blocks: [
+          {
+            type: 'text',
+            content: 'Objectif : créer les dossiers qui hébergeront les partages.',
+          },
+          {
+            type: 'code',
+            code: `sudo mkdir -p /srv/samba/lgnum
+sudo mkdir -p /srv/samba/rh
+sudo mkdir -p /srv/samba/si
+sudo mkdir -p /srv/samba/homes`,
+          },
+          {
+            type: 'text',
+            content:
+              '/srv/samba est le répertoire standard pour les données servies. On crée un dossier par partage.',
+          },
+        ],
+      },
+      {
+        title: '3. Permissions des dossiers',
+        blocks: [
+          {
+            type: 'text',
+            content: 'Objectif : attribuer les bons groupes propriétaires avec héritage.',
+          },
+          {
+            type: 'code',
+            code: `sudo chown -R root:"LGNUM\\domain users" /srv/samba/lgnum
+sudo chmod -R 2770 /srv/samba/lgnum
+sudo chown -R root:"LGNUM\\rh" /srv/samba/rh
+sudo chmod -R 2770 /srv/samba/rh
+sudo chown -R root:"LGNUM\\informatique" /srv/samba/si
+sudo chmod -R 2770 /srv/samba/si
+sudo chown -R root:"LGNUM\\domain users" /srv/samba/homes
+sudo chmod -R 2770 /srv/samba/homes`,
+          },
+          {
+            type: 'text',
+            content:
+              'Le 2770 active le bit setgid — tous les fichiers créés dans le dossier hériteront du groupe du dossier parent. Ça évite les problèmes de permissions quand un utilisateur crée un fichier : les collègues du même groupe pourront y accéder. Les noms de groupes AD doivent être préfixés par "LGNUM\\" pour que Linux les résolve correctement via Winbind.',
+          },
+          { type: 'text', content: 'Validation :' },
+          { type: 'code', code: `ls -la /srv/samba/` },
+          {
+            type: 'note',
+            content: 'Chaque dossier doit afficher le bon groupe propriétaire.',
+          },
+        ],
+      },
+      {
+        title: '4. Configuration des partages dans smb.conf',
+        blocks: [
+          {
+            type: 'text',
+            content: 'Objectif : déclarer les partages réseau dans Samba.',
+          },
+          { type: 'code', code: `sudo nano /etc/samba/smb.conf` },
+          {
+            type: 'text',
+            content: 'Ajouter à la fin du fichier après [sysvol] :',
+          },
+          {
+            type: 'code',
+            lang: 'conf',
+            code: `[LGNUM]
+path = /srv/samba/lgnum
+read only = no
+browseable = yes
+valid users = @"LGNUM\\domain users"
+create mask = 0660
+directory mask = 2770
+comment = Partage commun Lot-et-Garonne Numerique
+
+[RH]
+path = /srv/samba/rh
+read only = no
+browseable = yes
+valid users = @"LGNUM\\rh"
+create mask = 0660
+directory mask = 2770
+comment = Partage RH
+
+[SI]
+path = /srv/samba/si
+read only = no
+browseable = yes
+valid users = @"LGNUM\\informatique"
+create mask = 0660
+directory mask = 2770
+comment = Partage Service Informatique
+
+[homes]
+path = /srv/samba/homes/%U
+read only = no
+browseable = no
+valid users = %U
+create mask = 0600
+directory mask = 0700
+comment = Dossier personnel`,
+          },
+          {
+            type: 'text',
+            content:
+              'Le @ devant un nom de groupe signifie "tous les membres de ce groupe". %U est remplacé automatiquement par le login de l\'utilisateur connecté. Le partage homes crée un dossier personnel par utilisateur, non visible dans la liste mais accessible directement.',
+          },
+        ],
+      },
+      {
+        title: '5. Validation et test',
+        blocks: [
+          { type: 'code', code: `sudo testparm` },
+          {
+            type: 'note',
+            content: 'Doit afficher "Loaded services file OK" et lister tous les partages.',
+          },
+          { type: 'code', code: `sudo systemctl restart samba-ad-dc` },
+          { type: 'code', code: `smbclient -L //srvad.lgnum.local -U wladimir` },
+          {
+            type: 'note',
+            content: 'Doit lister LGNUM, RH, SI et le dossier personnel.',
+          },
+          {
+            type: 'code',
+            code: `smbclient //srvad.lgnum.local/SI -U wladimir -c "mkdir test; ls; rmdir test"`,
+          },
+          {
+            type: 'note',
+            content: 'Doit créer, lister et supprimer un dossier sans erreur.',
+          },
+          {
+            type: 'note',
+            content:
+              'Le message "SMB1 disabled -- no workgroup available" en fin de listing est normal et sans conséquence — SMB1 est désactivé par sécurité.',
+          },
+        ],
+      },
+    ],
+  },
 };
