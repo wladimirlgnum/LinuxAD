@@ -289,4 +289,197 @@ ping -c 2 1.1.1.1` },
       },
     ],
   },
+  3: {
+    objective:
+      "Configurer la synchronisation horaire du contrôleur de domaine et sécuriser le serveur avec un firewall.",
+    prerequisites: [
+      'Étape 2 terminée : le serveur Samba AD DC est opérationnel.',
+    ],
+    sections: [
+      {
+        title: '1. Configuration du fuseau horaire',
+        blocks: [
+          {
+            type: 'text',
+            content: 'Objectif : passer le serveur en heure française.',
+          },
+          {
+            type: 'code',
+            code: `sudo timedatectl set-timezone Europe/Paris
+timedatectl`,
+          },
+          {
+            type: 'note',
+            content: 'Résultat attendu : Time zone: Europe/Paris (CEST, +0200)',
+          },
+          {
+            type: 'text',
+            content:
+              'Par défaut Ubuntu Server est en UTC. On le passe en Europe/Paris pour que les logs et les tickets Kerberos soient en heure locale.',
+          },
+        ],
+      },
+      {
+        title: '2. Vérification de Chrony',
+        blocks: [
+          {
+            type: 'text',
+            content:
+              "Objectif : vérifier que chrony est déjà installé et actif (c'est le cas par défaut sur Ubuntu 26.04).",
+          },
+          { type: 'code', code: `systemctl status chrony` },
+          { type: 'note', content: 'Résultat attendu : active (running)' },
+          {
+            type: 'text',
+            content:
+              "chrony est le service NTP par défaut sur Ubuntu 26.04. Il remplace systemd-timesyncd. Il peut à la fois synchroniser l'horloge locale ET servir de serveur NTP pour les postes clients — c'est pour ça qu'il est préféré sur un DC.",
+          },
+        ],
+      },
+      {
+        title: '3. Configuration de Chrony comme serveur NTP',
+        blocks: [
+          {
+            type: 'text',
+            content:
+              'Objectif : autoriser les postes du réseau maquette à se synchroniser sur le DC.',
+          },
+          { type: 'code', code: `sudo nano /etc/chrony/chrony.conf` },
+          { type: 'text', content: 'Ajouter à la fin du fichier :' },
+          {
+            type: 'code',
+            lang: 'conf',
+            code: `# Autoriser les postes du réseau maquette à se synchroniser sur ce serveur
+allow 192.168.100.0/24
+
+# Servir l'heure même si chrony n'est pas encore synchronisé (utile au boot)
+local stratum 10`,
+          },
+          {
+            type: 'code',
+            code: `sudo systemctl restart chrony
+chronyc sources -v`,
+          },
+          {
+            type: 'note',
+            content:
+              'Résultat attendu : plusieurs lignes avec des serveurs NTP Ubuntu, une étoile * devant la meilleure source.',
+          },
+          {
+            type: 'text',
+            content:
+              "`allow 192.168.100.0/24` autorise tous les postes du réseau à utiliser ce serveur comme source NTP. `local stratum 10` fait que le serveur se déclare comme source de temps même s'il perd sa synchro internet, pour que les clients ne restent jamais sans référence.",
+          },
+          {
+            type: 'note',
+            content:
+              "Si chronyc sources est vide après le restart, c'est un problème de résolution DNS. Vérifier que le forwarder DNS de Samba pointe vers un DNS public (1.1.1.1) et pas vers la gateway.",
+          },
+        ],
+      },
+      {
+        title: '4. Correction du forwarder DNS (piège rencontré)',
+        blocks: [
+          {
+            type: 'text',
+            content:
+              'Objectif : corriger le DNS forwarder de Samba si la résolution externe ne fonctionne pas.',
+          },
+          {
+            type: 'text',
+            content:
+              "Lors du provisionnement (étape 2), on avait mis 192.168.100.1 (la gateway) comme forwarder DNS. Mais la gateway ne fait pas tourner de serveur DNS — elle résout pour elle-même via systemd-resolved mais n'expose pas ce service sur le réseau. Résultat : le DNS Samba ne peut pas résoudre les noms externes (comme les pools NTP). La solution est de pointer directement vers un DNS public.",
+          },
+          { type: 'code', code: `sudo nano /etc/samba/smb.conf` },
+          {
+            type: 'note',
+            content:
+              'Changer la ligne : `dns forwarder = 192.168.100.1` en `dns forwarder = 1.1.1.1`',
+          },
+          {
+            type: 'code',
+            code: `sudo systemctl restart samba-ad-dc
+host 2.ntp.ubuntu.com`,
+          },
+          {
+            type: 'note',
+            content: 'host 2.ntp.ubuntu.com doit résoudre vers une IP.',
+          },
+          {
+            type: 'text',
+            content:
+              "C'est un piège courant. La gateway fait du NAT (couche 3) mais ne fait pas office de résolveur DNS pour les autres machines. Pour que ça marche avec la gateway comme forwarder, il faudrait y installer un résolveur DNS (comme dnsmasq) qui écoute sur 192.168.100.1 — mais pointer vers 1.1.1.1 est plus simple et fiable.",
+          },
+        ],
+      },
+      {
+        title: '5. Installation et configuration du firewall (ufw)',
+        blocks: [
+          {
+            type: 'text',
+            content:
+              'Objectif : n\'autoriser que les ports nécessaires au fonctionnement du DC.',
+          },
+          {
+            type: 'code',
+            code: `sudo apt install ufw -y
+sudo ufw allow from 192.168.100.0/24 to any port 53    # DNS
+sudo ufw allow from 192.168.100.0/24 to any port 88    # Kerberos
+sudo ufw allow from 192.168.100.0/24 to any port 135   # RPC
+sudo ufw allow from 192.168.100.0/24 to any port 139   # SMB/NetBIOS
+sudo ufw allow from 192.168.100.0/24 to any port 389   # LDAP
+sudo ufw allow from 192.168.100.0/24 to any port 445   # SMB
+sudo ufw allow from 192.168.100.0/24 to any port 464   # Kerberos password change
+sudo ufw allow from 192.168.100.0/24 to any port 636   # LDAPS
+sudo ufw allow from 192.168.100.0/24 to any port 3268  # Global Catalog
+sudo ufw allow from 192.168.100.0/24 to any port 3269  # Global Catalog SSL
+sudo ufw allow from 192.168.100.0/24 to any port 123   # NTP
+sudo ufw allow ssh                                     # SSH depuis n'importe où
+sudo ufw enable`,
+          },
+          {
+            type: 'text',
+            content:
+              'On ouvre uniquement les ports nécessaires au DC (DNS, Kerberos, LDAP, SMB, NTP, RPC, Global Catalog), restreints au réseau maquette 192.168.100.0/24. SSH est ouvert plus largement pour l\'administration à distance.',
+          },
+          {
+            type: 'note',
+            content:
+              "ufw et iptables-persistent sont incompatibles. Si iptables-persistent était installé, ufw l'a remplacé. Les règles NAT sur la gateway doivent être gérées séparément.",
+          },
+        ],
+      },
+      {
+        title: '6. Tests de validation',
+        blocks: [
+          {
+            type: 'text',
+            content:
+              'a) DNS toujours fonctionnel après le firewall :',
+          },
+          { type: 'code', code: `host lgnum.local` },
+          { type: 'note', content: 'Doit retourner 192.168.100.2.' },
+          { type: 'text', content: 'b) Sources NTP :' },
+          { type: 'code', code: `chronyc sources -v` },
+          {
+            type: 'note',
+            content: 'Doit afficher les sources NTP avec une * sur la meilleure.',
+          },
+          { type: 'text', content: 'c) Fuseau horaire et synchronisation :' },
+          { type: 'code', code: `timedatectl` },
+          {
+            type: 'note',
+            content:
+              'Doit afficher Europe/Paris et System clock synchronized: yes.',
+          },
+          { type: 'text', content: 'd) Règles du firewall :' },
+          { type: 'code', code: `sudo ufw status verbose` },
+          {
+            type: 'note',
+            content: 'Doit lister toutes les règles configurées.',
+          },
+        ],
+      },
+    ],
+  },
 };
