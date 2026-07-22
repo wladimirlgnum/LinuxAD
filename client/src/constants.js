@@ -1,23 +1,60 @@
-// Libelles et styles partages pour les differents systemes de statuts.
+// Libellés et styles partagés pour les différents systèmes de statuts.
+// Les classes de couleur pointent vers les tokens de la DA (var(--...)),
+// donc les pastilles suivent automatiquement le thème dark/light.
 
-// Statuts des etapes macro et des machines du schema reseau
+// Statuts des étapes macro et des machines du schéma réseau
 export const STEP_STATUS = {
-  todo: { label: 'A faire', icon: '⏳', badge: 'bg-slate-100 text-slate-600 ring-slate-200', dot: 'bg-slate-400' },
-  in_progress: { label: 'En cours', icon: '🔄', badge: 'bg-amber-100 text-amber-800 ring-amber-200', dot: 'bg-amber-500' },
-  done: { label: 'Terminé', icon: '✅', badge: 'bg-emerald-100 text-emerald-800 ring-emerald-200', dot: 'bg-emerald-500' },
+  todo: {
+    label: 'À faire',
+    icon: '○',
+    badge: 'bg-[var(--neutral-quiet)] text-muted ring-[var(--neutral)]/30',
+    dot: 'bg-[var(--neutral)]',
+  },
+  in_progress: {
+    label: 'En cours',
+    icon: '◐',
+    badge: 'bg-[var(--accent-quiet)] text-accent ring-[var(--accent)]/30',
+    dot: 'bg-[var(--accent)]',
+  },
+  done: {
+    label: 'Terminé',
+    icon: '●',
+    badge: 'bg-[var(--success-quiet)] text-success ring-[var(--success)]/30',
+    dot: 'bg-[var(--success)]',
+  },
 };
 
 export const STEP_STATUS_ORDER = ['todo', 'in_progress', 'done'];
 
 // Statuts de migration de la matrice logiciels
 export const SOFTWARE_STATUS = {
-  compatible: { label: 'Compatible', icon: '✅', badge: 'bg-emerald-100 text-emerald-800 ring-emerald-200' },
-  to_validate: { label: 'À valider', icon: '🔄', badge: 'bg-amber-100 text-amber-800 ring-amber-200' },
-  to_check: { label: 'À vérifier', icon: '❓', badge: 'bg-sky-100 text-sky-800 ring-sky-200' },
-  blocking: { label: 'Bloquant', icon: '⛔', badge: 'bg-rose-100 text-rose-800 ring-rose-200' },
+  compatible: {
+    label: 'Compatible',
+    icon: '●',
+    badge: 'bg-[var(--success-quiet)] text-success ring-[var(--success)]/30',
+    dot: 'bg-[var(--success)]',
+  },
+  to_validate: {
+    label: 'À valider',
+    icon: '◐',
+    badge: 'bg-[var(--accent-quiet)] text-accent ring-[var(--accent)]/30',
+    dot: 'bg-[var(--accent)]',
+  },
+  to_check: {
+    label: 'À vérifier',
+    icon: '◌',
+    badge: 'bg-[var(--info-quiet)] text-info ring-[var(--info)]/30',
+    dot: 'bg-[var(--info)]',
+  },
+  blocking: {
+    label: 'Bloquant',
+    icon: '✕',
+    badge: 'bg-[var(--danger-quiet)] text-danger ring-[var(--danger)]/30',
+    dot: 'bg-[var(--danger)]',
+  },
 };
 
 export const SOFTWARE_STATUS_ORDER = ['compatible', 'to_validate', 'to_check', 'blocking'];
 
-// Poids utilises pour calculer la progression globale : une etape en cours compte pour moitie.
+// Poids utilisés pour calculer la progression globale : une étape en cours compte pour moitié.
 export const STATUS_WEIGHT = { todo: 0, in_progress: 0.5, done: 1 };
