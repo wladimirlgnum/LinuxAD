@@ -6,6 +6,206 @@
 // Types de blocs : { type: 'text' | 'code' | 'note', ... }
 
 export const GUIDES = {
+  1: {
+    title: 'Infrastructure réseau',
+    objective:
+      "Transformer un PC Ubuntu en passerelle NAT pour créer un réseau maquette isolé (192.168.100.0/24) permettant au futur serveur Samba AD d'accéder à Internet sans exposer la maquette sur le réseau de l'entreprise.",
+    prerequisites: [
+      'Un PC avec Ubuntu Server installé + ubuntu-desktop (GNOME).',
+      'Deux cartes réseau disponibles (carte mère eno1 + dock Lenovo USB enx3ce1a1bbbd74).',
+      'Un câble Ethernet RJ45 pour relier les deux machines.',
+    ],
+    sections: [
+      {
+        title: '1. Installation du système',
+        blocks: [
+          {
+            type: 'text',
+            content: 'Objectif : installer Ubuntu Server avec un environnement graphique.',
+          },
+          {
+            type: 'text',
+            content:
+              'On installe d\'abord Ubuntu Server sur la tour physique, puis on ajoute le bureau GNOME :',
+          },
+          { type: 'code', code: `sudo apt install -y ubuntu-desktop` },
+          {
+            type: 'text',
+            content:
+              'On part d\'un Ubuntu Server pour avoir un système propre et léger, puis on ajoute l\'environnement graphique pour en faire un poste de travail complet. Les paquets .deb sont téléchargés dans /var/cache/apt/archives/ puis configurés.',
+          },
+        ],
+      },
+      {
+        title: '2. Identification des interfaces réseau',
+        blocks: [
+          {
+            type: 'text',
+            content: 'Objectif : identifier et comprendre les deux cartes réseau.',
+          },
+          {
+            type: 'code',
+            code: `ip link
+ip a`,
+          },
+          {
+            type: 'text',
+            content:
+              'ip link affiche les interfaces au niveau couche 2 (état UP/DOWN, adresse MAC) ; ip a les affiche au niveau couche 3 (adresses IP assignées). La machine a deux cartes réseau avec deux rôles différents :',
+          },
+          {
+            type: 'text',
+            content:
+              "1. eno1 (carte mère, MAC 40:b0:34:38:04:10) → connectée au réseau de l'entreprise, recevra son IP en DHCP (192.168.10.70).\n2. enx3ce1a1bbbd74 (dock Lenovo USB 3.0) → dédiée au réseau privé de la maquette, sera configurée en IP fixe (192.168.100.1).",
+          },
+          {
+            type: 'note',
+            content:
+              'ip link montre la couche 2 (le lien physique, est-ce que le câble est branché ?) tandis que ip a montre la couche 3 (est-ce qu\'une adresse IP est configurée ?). Une interface peut être UP en couche 2 mais sans IP en couche 3.',
+          },
+        ],
+      },
+      {
+        title: '3. Configuration Netplan',
+        blocks: [
+          {
+            type: 'text',
+            content: 'Objectif : configurer les deux interfaces réseau avec les bons rôles.',
+          },
+          { type: 'code', code: `sudo nano /etc/netplan/50-cloud-init.yaml` },
+          { type: 'text', content: 'Contenu exact du fichier :' },
+          {
+            type: 'code',
+            lang: 'yaml',
+            code: `network:
+  ethernets:
+    eno1:
+      match:
+        macaddress: 40:b0:34:38:04:10
+      set-name: eno1
+      dhcp4: true
+    enx3ce1a1bbbd74:
+      dhcp4: false
+      addresses:
+        - 192.168.100.1/24
+  version: 2`,
+          },
+          { type: 'code', code: `sudo netplan apply` },
+          {
+            type: 'text',
+            content:
+              'eno1 reste en DHCP pour l\'accès au réseau d\'entreprise et Internet. La deuxième carte est configurée en IP statique 192.168.100.1 sur le sous-réseau privé 192.168.100.0/24 dédié à la maquette. Ce sous-réseau est complètement isolé du réseau de l\'entreprise.',
+          },
+          { type: 'text', content: 'Validation :' },
+          { type: 'code', code: `ip a` },
+          {
+            type: 'note',
+            content:
+              'Vérifier que eno1 a bien une IP en 192.168.10.x et que enx3ce1a1bbbd74 a l\'IP 192.168.100.1/24.',
+          },
+          {
+            type: 'note',
+            content:
+              "L'interface du dock peut passer en état DOWN quand le câble Ethernet n'est pas branché. C'est normal — elle repasse en UP automatiquement dès que le câble est connecté à la deuxième machine.",
+          },
+        ],
+      },
+      {
+        title: "4. Activation de l'IP Forwarding",
+        blocks: [
+          {
+            type: 'text',
+            content:
+              'Objectif : autoriser la machine à transférer des paquets entre ses deux interfaces (comportement de routeur).',
+          },
+          {
+            type: 'text',
+            content:
+              'Par défaut, Linux ne transfère pas les paquets reçus sur une interface vers une autre — c\'est un comportement de poste de travail, pas de routeur. Il faut activer l\'IP Forwarding pour que les paquets du réseau maquette (192.168.100.0/24) puissent être relayés vers le réseau entreprise (192.168.10.0/24) et inversement.',
+          },
+          {
+            type: 'note',
+            content:
+              'Le fichier /etc/sysctl.conf n\'existe plus par défaut sur les versions récentes d\'Ubuntu. On utilise un fichier drop-in dans /etc/sysctl.d/ à la place, ce qui est la méthode moderne et recommandée.',
+          },
+          { type: 'code', code: `sudo nano /etc/sysctl.d/99-routing.conf` },
+          { type: 'text', content: 'Contenu :' },
+          { type: 'code', lang: 'conf', code: `net.ipv4.ip_forward=1` },
+          {
+            type: 'text',
+            content: 'On charge le paramètre immédiatement en mémoire :',
+          },
+          { type: 'code', code: `sudo sysctl -p /etc/sysctl.d/99-routing.conf` },
+          { type: 'text', content: 'Validation :' },
+          { type: 'code', code: `cat /proc/sys/net/ipv4/ip_forward` },
+          { type: 'note', content: 'Doit retourner 1.' },
+        ],
+      },
+      {
+        title: '5. Configuration du NAT (Masquerade)',
+        blocks: [
+          {
+            type: 'text',
+            content:
+              'Objectif : traduire les adresses IP du réseau privé vers l\'extérieur pour donner l\'accès Internet à la maquette.',
+          },
+          {
+            type: 'text',
+            content:
+              'Le NAT (Network Address Translation) via Masquerade remplace l\'adresse source des paquets sortants (192.168.100.x) par l\'adresse de la carte eno1 (192.168.10.70). Pour le réseau de l\'entreprise, tout le trafic semble venir de la passerelle — la maquette est invisible et isolée.',
+          },
+          {
+            type: 'code',
+            code: `sudo iptables -t nat -A POSTROUTING -o eno1 -j MASQUERADE
+sudo apt install iptables-persistent -y
+sudo iptables-save | sudo tee /etc/iptables/rules.v4`,
+          },
+          {
+            type: 'text',
+            content:
+              'La première commande crée la règle NAT, la deuxième installe l\'utilitaire de persistance, la troisième sauvegarde les règles sur disque pour qu\'elles survivent aux redémarrages.',
+          },
+          { type: 'text', content: 'Validation :' },
+          { type: 'code', code: `sudo iptables -t nat -L POSTROUTING -v` },
+          { type: 'note', content: 'Doit afficher la règle MASQUERADE sur eno1.' },
+          {
+            type: 'note',
+            content:
+              'Attention, ufw et iptables-persistent sont incompatibles. Si ufw est installé plus tard, il peut supprimer iptables-persistent. Dans ce cas, il faudra recréer la règle NAT manuellement après chaque reboot, ou trouver une autre méthode de persistance (script systemd par exemple).',
+          },
+        ],
+      },
+      {
+        title: '6. Validation du routage',
+        blocks: [
+          {
+            type: 'text',
+            content: 'Objectif : vérifier que la chaîne de routage fonctionne de bout en bout.',
+          },
+          {
+            type: 'text',
+            content:
+              'On se place sur la deuxième machine (futur serveur Samba, 192.168.100.2) et on vérifie qu\'elle peut atteindre Internet en passant à travers la passerelle. Commandes à exécuter depuis cette machine :',
+          },
+          {
+            type: 'code',
+            code: `ping -c 2 192.168.100.1
+ping -c 2 1.1.1.1`,
+          },
+          {
+            type: 'text',
+            content:
+              'ping vers 192.168.100.1 vérifie la connectivité avec la passerelle (couche réseau locale) ; ping vers 1.1.1.1 vérifie que le NAT fonctionne (le paquet traverse la passerelle et sort sur Internet).',
+          },
+          {
+            type: 'note',
+            content:
+              'Résultat attendu : les deux pings doivent répondre. Si le premier passe mais pas le second, vérifier l\'IP Forwarding et la règle iptables.',
+          },
+        ],
+      },
+    ],
+  },
   2: {
     title: 'Installation du serveur Samba AD DC',
     objective:
