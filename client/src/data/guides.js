@@ -484,4 +484,113 @@ sudo ufw enable`,
       },
     ],
   },
+  4: {
+    title: 'Création des comptes et groupes AD',
+    objective:
+      "Créer les utilisateurs et groupes dans l'annuaire Active Directory pour refléter l'organigramme de Lot-et-Garonne Numérique.",
+    prerequisites: [
+      'Étape 3 terminée : le serveur Samba AD DC est opérationnel avec DNS et NTP fonctionnels.',
+    ],
+    sections: [
+      {
+        title: '1. Création des groupes',
+        blocks: [
+          {
+            type: 'text',
+            content: 'Objectif : créer les groupes correspondant aux services de la structure.',
+          },
+          {
+            type: 'code',
+            code: `sudo samba-tool group add "Direction"
+sudo samba-tool group add "Compta-Administration"
+sudo samba-tool group add "Conseillers-Numeriques"
+sudo samba-tool group add "RH"
+sudo samba-tool group add "Informatique"`,
+          },
+          {
+            type: 'text',
+            content:
+              "Les groupes AD permettent de gérer les permissions de façon centralisée. Plutôt que d'attribuer des droits utilisateur par utilisateur, on les affecte au groupe et tous les membres en héritent. C'est le même principe que sous Windows Server.",
+          },
+        ],
+      },
+      {
+        title: '2. Création des utilisateurs',
+        blocks: [
+          {
+            type: 'text',
+            content: "Objectif : créer les comptes de chaque employé dans l'annuaire.",
+          },
+          {
+            type: 'code',
+            code: `sudo samba-tool user add myriam --given-name=Myriam --surname=Maraval --mail-address=myriam.maraval@lgnum.fr
+sudo samba-tool user add fabrice --given-name=Fabrice --surname=Lalanne --mail-address=fabrice.lalanne@lgnum.fr
+sudo samba-tool user add nathalie --given-name=Nathalie --surname=Payen --mail-address=nathalie.payen@lgnum.fr
+sudo samba-tool user add geoffroy --given-name=Geoffroy --surname=Gaillard --mail-address=geoffroy.gaillard@lgnum.fr
+sudo samba-tool user add asmaa --given-name=Asmaa --surname=Assila --mail-address=asmaa.assila@lgnum.fr
+sudo samba-tool user add wladimir --given-name=Wladimir --surname=Bigand --mail-address=wladimir.bigand@lgnum.fr`,
+          },
+          {
+            type: 'text',
+            content:
+              "Chaque commande demande un mot de passe interactivement. Le mot de passe doit respecter la politique de complexité AD (8+ caractères, majuscule, minuscule, chiffre ou spécial). Les attributs --given-name, --surname et --mail-address remplissent les champs de l'annuaire consultables par les applications (client mail, intranet, etc.).",
+          },
+          {
+            type: 'note',
+            content:
+              'Noter immédiatement chaque mot de passe dans KeePassXC. Ils ne sont pas récupérables.',
+          },
+        ],
+      },
+      {
+        title: '3. Affectation aux groupes',
+        blocks: [
+          {
+            type: 'text',
+            content: 'Objectif : rattacher chaque utilisateur à son ou ses groupes.',
+          },
+          {
+            type: 'code',
+            code: `sudo samba-tool group addmembers "Direction" myriam
+sudo samba-tool group addmembers "Compta-Administration" fabrice,nathalie
+sudo samba-tool group addmembers "RH" nathalie
+sudo samba-tool group addmembers "Conseillers-Numeriques" asmaa,geoffroy
+sudo samba-tool group addmembers "Informatique" wladimir`,
+          },
+          {
+            type: 'text',
+            content:
+              "Un utilisateur peut appartenir à plusieurs groupes (Nathalie est dans Compta-Administration ET RH). Les virgules permettent d'ajouter plusieurs membres d'un coup.",
+          },
+        ],
+      },
+      {
+        title: '4. Vérification',
+        blocks: [
+          {
+            type: 'text',
+            content: "Objectif : s'assurer que tous les comptes et groupes sont correctement créés.",
+          },
+          { type: 'code', code: `sudo samba-tool user list` },
+          {
+            type: 'note',
+            content: 'Doit lister les 6 utilisateurs + Administrator, Guest, krbtgt.',
+          },
+          {
+            type: 'code',
+            code: `sudo samba-tool group listmembers "Direction"
+sudo samba-tool group listmembers "Compta-Administration"
+sudo samba-tool group listmembers "RH"
+sudo samba-tool group listmembers "Conseillers-Numeriques"
+sudo samba-tool group listmembers "Informatique"`,
+          },
+          {
+            type: 'note',
+            content:
+              'Résultats attendus : Direction → myriam ; Compta-Administration → fabrice, nathalie ; RH → nathalie ; Conseillers-Numeriques → asmaa, geoffroy ; Informatique → wladimir.',
+          },
+        ],
+      },
+    ],
+  },
 };
