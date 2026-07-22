@@ -1089,4 +1089,184 @@ exit`,
       },
     ],
   },
+  9: {
+    title: 'Sauvegardes et documentation',
+    objective:
+      "Mettre en place un backup automatique quotidien de l'Active Directory, des fichiers de configuration et du SYSVOL, avec une rétention de 30 jours.",
+    prerequisites: [
+      'Serveur Samba AD DC opérationnel (étapes 1 à 7 terminées).',
+    ],
+    sections: [
+      {
+        title: '1. Création du dossier de backup',
+        blocks: [
+          {
+            type: 'text',
+            content: 'Objectif : préparer l\'arborescence pour stocker les sauvegardes.',
+          },
+          { type: 'code', code: `sudo mkdir -p /srv/backups/samba` },
+          {
+            type: 'text',
+            content:
+              'On utilise /srv/backups car c\'est le répertoire standard pour les données de service. Le dossier samba contiendra les archives .tar.bz2 générées par samba-tool et les archives de config .tar.gz.',
+          },
+        ],
+      },
+      {
+        title: '2. Création du fichier de credentials',
+        blocks: [
+          {
+            type: 'text',
+            content:
+              'Objectif : stocker les identifiants Administrator de manière sécurisée pour l\'automatisation.',
+          },
+          { type: 'code', code: `sudo nano /root/.samba-credentials` },
+          { type: 'text', content: 'Contenu :' },
+          {
+            type: 'code',
+            lang: 'conf',
+            code: `username=administrator
+password=MOT_DE_PASSE_ADMIN`,
+          },
+          { type: 'code', code: `sudo chmod 400 /root/.samba-credentials` },
+          {
+            type: 'text',
+            content:
+              'Le fichier est en permission 400 (lecture seule par root). Le script de backup lit ce fichier pour s\'authentifier auprès de Samba sans intervention humaine. C\'est la méthode standard pour les tâches automatisées — le mot de passe n\'apparaît ni dans le crontab ni dans les logs.',
+          },
+          {
+            type: 'note',
+            content:
+              'Remplacez MOT_DE_PASSE_ADMIN par le vrai mot de passe Administrator défini à l\'étape 2.',
+          },
+        ],
+      },
+      {
+        title: '3. Création du script de sauvegarde',
+        blocks: [
+          {
+            type: 'text',
+            content: 'Objectif : automatiser le backup complet de l\'AD et des configs.',
+          },
+          { type: 'code', code: `sudo nano /srv/backups/samba-backup.sh` },
+          { type: 'text', content: 'Contenu du script :' },
+          {
+            type: 'code',
+            lang: 'bash',
+            code: `#!/bin/bash
+# Sauvegarde Samba AD DC
+# Exécuté quotidiennement par cron
+
+DATE=$(date +%Y-%m-%d_%H%M)
+BACKUP_DIR="/srv/backups/samba"
+RETAIN_DAYS=30
+
+echo "=== Backup Samba AD - $DATE ==="
+
+# 1. Backup avec samba-tool (méthode officielle)
+CREDS=$(cat /root/.samba-credentials)
+SAMBA_USER=$(echo "$CREDS" | grep username | cut -d= -f2)
+SAMBA_PASS=$(echo "$CREDS" | grep password | cut -d= -f2)
+
+samba-tool domain backup online \\
+  --targetdir="$BACKUP_DIR" \\
+  --server=srvad.lgnum.local \\
+  -U "$SAMBA_USER%$SAMBA_PASS"
+
+# 2. Sauvegarde des fichiers de config
+tar czf "$BACKUP_DIR/config-$DATE.tar.gz" \\
+  /etc/samba/smb.conf \\
+  /etc/krb5.conf \\
+  /etc/netplan/ \\
+  /etc/hosts \\
+  /etc/nsswitch.conf \\
+  /etc/systemd/resolved.conf \\
+  /etc/chrony/chrony.conf \\
+  2>/dev/null
+
+# 3. Nettoyage des backups de plus de 30 jours
+find "$BACKUP_DIR" -name "*.tar.bz2" -mtime +$RETAIN_DAYS -delete
+find "$BACKUP_DIR" -name "config-*.tar.gz" -mtime +$RETAIN_DAYS -delete
+
+echo "=== Backup terminé ==="`,
+          },
+          { type: 'code', code: `sudo chmod +x /srv/backups/samba-backup.sh` },
+          {
+            type: 'text',
+            content:
+              'Le script fait trois choses — (1) samba-tool domain backup online clone l\'intégralité de la base AD (annuaire LDAP, Kerberos, DNS, SYSVOL) dans une archive .tar.bz2, (2) tar sauvegarde tous les fichiers de configuration système modifiés pendant le projet, (3) find supprime les archives de plus de 30 jours pour éviter de remplir le disque.',
+          },
+          {
+            type: 'note',
+            content:
+              'Installer python3-setproctitle (`sudo apt install -y python3-setproctitle`) pour éviter le warning sur les mots de passe en ligne de commande.',
+          },
+        ],
+      },
+      {
+        title: '4. Test manuel',
+        blocks: [
+          {
+            type: 'text',
+            content: 'Objectif : vérifier que le script fonctionne avant de l\'automatiser.',
+          },
+          { type: 'code', code: `sudo /srv/backups/samba-backup.sh` },
+          {
+            type: 'text',
+            content:
+              'Résultat attendu : le script affiche la progression de la réplication, puis "Backup terminé". Vérifier la présence des fichiers :',
+          },
+          {
+            type: 'code',
+            code: `ls -lh /srv/backups/samba/*.tar.bz2
+ls -lh /srv/backups/samba/config-*.tar.gz`,
+          },
+          {
+            type: 'note',
+            content:
+              'Le .tar.bz2 doit faire environ 1.4 Mo (archive de l\'AD) et le config-*.tar.gz contient les fichiers de configuration.',
+          },
+          {
+            type: 'text',
+            content:
+              'Chaque backup AD fait ~1.4 Mo. Avec 30 jours de rétention, ça représente environ 42 Mo — négligeable sur un disque de 98 Go.',
+          },
+        ],
+      },
+      {
+        title: '5. Automatisation avec cron',
+        blocks: [
+          {
+            type: 'text',
+            content: 'Objectif : programmer le backup tous les jours à 2h du matin.',
+          },
+          { type: 'code', code: `sudo crontab -e` },
+          { type: 'text', content: 'Ajouter la ligne :' },
+          {
+            type: 'code',
+            code: `0 2 * * * /srv/backups/samba-backup.sh >> /var/log/samba-backup.log 2>&1`,
+          },
+          { type: 'text', content: 'Validation :' },
+          { type: 'code', code: `sudo crontab -l` },
+          { type: 'note', content: 'Doit afficher la ligne du cron.' },
+          {
+            type: 'text',
+            content:
+              'cron exécute le script chaque nuit à 2h. La sortie (stdout et stderr) est redirigée vers /var/log/samba-backup.log pour le suivi. En cas de problème, consulter ce fichier pour diagnostiquer.',
+          },
+        ],
+      },
+      {
+        title: '6. Vérification de l\'espace disque',
+        blocks: [
+          { type: 'code', code: `df -h /srv` },
+          {
+            type: 'note',
+            content:
+              'Résultat attendu : suffisamment d\'espace libre (notre serveur a 86 Go disponibles sur 98 Go, largement suffisant pour les backups).',
+          },
+        ],
+      },
+    ],
+  },
 };
