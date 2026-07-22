@@ -786,4 +786,166 @@ comment = Dossier personnel`,
       },
     ],
   },
+  6: {
+    title: 'Jonction du premier poste client au domaine',
+    objective:
+      "Joindre la machine ubuntu-usr (192.168.100.1) au domaine lgnum.local et valider l'authentification avec un compte AD.",
+    prerequisites: [
+      'Étapes 1 à 5 terminées : le DC Samba tourne, le DNS résout lgnum.local, les comptes et groupes sont créés, les partages sont configurés.',
+    ],
+    sections: [
+      {
+        title: '1. Configuration DNS du poste client',
+        blocks: [
+          {
+            type: 'text',
+            content:
+              'Objectif : faire pointer le DNS du poste vers le serveur AD pour qu\'il puisse découvrir le domaine.',
+          },
+          { type: 'code', code: `sudo nano /etc/netplan/00-installer-config.yaml` },
+          {
+            type: 'text',
+            content: 'Ajouter sur l\'interface du réseau maquette (enx3ce1a1bbbd74) :',
+          },
+          {
+            type: 'code',
+            lang: 'yaml',
+            code: `      nameservers:
+        addresses:
+          - 192.168.100.2
+        search:
+          - lgnum.local`,
+          },
+          { type: 'code', code: `sudo netplan apply` },
+          {
+            type: 'text',
+            content: 'Puis forcer la résolution si systemd-resolved intercepte :',
+          },
+          {
+            type: 'code',
+            code: `sudo resolvectl dns enx3ce1a1bbbd74 192.168.100.2
+sudo resolvectl domain enx3ce1a1bbbd74 lgnum.local ~local`,
+          },
+          { type: 'text', content: 'Validation :' },
+          { type: 'code', code: `host srvad.lgnum.local` },
+          { type: 'note', content: 'Doit retourner 192.168.100.2.' },
+          {
+            type: 'text',
+            content:
+              "Le poste client doit interroger le DNS Samba pour trouver le contrôleur de domaine. Sans ça, la découverte du domaine (realm discover) échouera. Sur cette machine, l'interface eno1 reste en DHCP pour l'accès internet via le réseau entreprise, et l'interface maquette utilise le DNS AD.",
+          },
+          {
+            type: 'note',
+            content:
+              "systemd-resolved peut intercepter les requêtes DNS et les envoyer au mauvais serveur (celui de l'entreprise sur eno1). La commande resolvectl force la résolution du domaine lgnum.local via l'interface maquette. On peut vérifier avec `resolvectl status` que l'interface maquette utilise bien 192.168.100.2.",
+          },
+        ],
+      },
+      {
+        title: '2. Installation des paquets',
+        blocks: [
+          {
+            type: 'text',
+            content: 'Objectif : installer les outils nécessaires à la jonction au domaine.',
+          },
+          {
+            type: 'code',
+            code: `sudo apt install -y sssd sssd-ad sssd-tools realmd adcli krb5-user packagekit samba-common-bin`,
+          },
+          {
+            type: 'note',
+            content:
+              'krb5-user pose 3 questions interactives :\n1. Royaume Kerberos → LGNUM.LOCAL (en majuscules)\n2. Serveur Kerberos → srvad.lgnum.local\n3. Serveur administratif → srvad.lgnum.local',
+          },
+          {
+            type: 'text',
+            content:
+              "realmd simplifie la jonction au domaine. sssd gère l'authentification des utilisateurs AD sur le poste Linux (il met en cache les identités et permet la connexion même si le DC est temporairement injoignable). adcli communique avec l'AD pour enregistrer la machine. krb5-user fournit le client Kerberos.",
+          },
+        ],
+      },
+      {
+        title: '3. Découverte du domaine',
+        blocks: [
+          {
+            type: 'text',
+            content: 'Objectif : vérifier que le poste voit le domaine avant de tenter la jonction.',
+          },
+          { type: 'code', code: `realm discover lgnum.local` },
+          {
+            type: 'note',
+            content:
+              'Résultat attendu : type: kerberos, realm-name: LGNUM.LOCAL, domain-name: lgnum.local, configured: no, server-software: active-directory',
+          },
+          {
+            type: 'text',
+            content:
+              "realm discover interroge le DNS pour trouver les enregistrements SRV du domaine, puis contacte le DC pour récupérer les informations. Si ça échoue, c'est un problème DNS.",
+          },
+        ],
+      },
+      {
+        title: '4. Jonction au domaine',
+        blocks: [
+          {
+            type: 'text',
+            content: 'Objectif : enregistrer la machine dans l\'annuaire AD.',
+          },
+          { type: 'code', code: `sudo realm join -U administrator lgnum.local` },
+          { type: 'text', content: 'Saisir le mot de passe Administrator du domaine.' },
+          { type: 'text', content: 'Validation :' },
+          { type: 'code', code: `realm list` },
+          { type: 'note', content: 'Doit afficher configured: kerberos-member.' },
+          {
+            type: 'text',
+            content:
+              'Cette commande fait plusieurs choses automatiquement — elle obtient un ticket Kerberos pour l\'administrateur, crée un compte machine dans l\'AD, configure SSSD pour l\'authentification, et met à jour PAM et NSS. C\'est l\'équivalent du "Joindre un domaine" de Windows.',
+          },
+        ],
+      },
+      {
+        title: '5. Activation du home automatique',
+        blocks: [
+          {
+            type: 'text',
+            content:
+              'Objectif : créer automatiquement le répertoire personnel à la première connexion d\'un utilisateur AD.',
+          },
+          { type: 'code', code: `sudo pam-auth-update --enable mkhomedir` },
+          {
+            type: 'text',
+            content:
+              "Sans cette étape, la connexion d'un utilisateur AD échouerait car son répertoire home n'existe pas sur le poste. Cette commande ajoute un module PAM qui crée le dossier /home/utilisateur@lgnum.local à la volée.",
+          },
+        ],
+      },
+      {
+        title: '6. Test de connexion',
+        blocks: [
+          {
+            type: 'text',
+            content: 'Objectif : valider qu\'un utilisateur AD peut se connecter sur le poste.',
+          },
+          {
+            type: 'code',
+            code: `su - wladimir@lgnum.local
+whoami
+pwd
+id wladimir@lgnum.local
+exit`,
+          },
+          {
+            type: 'note',
+            content:
+              'Résultats attendus : whoami → wladimir@lgnum.local ; pwd → /home/wladimir@lgnum.local ; id → affiche l\'uid, le gid (domain users) et les groupes (informatique) ; exit → retour au compte local.',
+          },
+          {
+            type: 'text',
+            content:
+              'Résultat attendu : connexion réussie, home créé automatiquement dans /home/wladimir@lgnum.local, groupes AD visibles.',
+          },
+        ],
+      },
+    ],
+  },
 };
