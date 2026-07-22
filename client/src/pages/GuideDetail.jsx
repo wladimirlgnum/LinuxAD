@@ -77,7 +77,7 @@ export default function GuideDetail() {
         ← Tous les guides
       </Link>
 
-      <PageHeader title={`Étape ${stepId} — Installation du serveur Samba AD DC`} />
+      <PageHeader title={`Étape ${stepId} — ${guide.title}`} />
 
       <div className="grid gap-6 lg:grid-cols-[1fr_18rem] lg:items-start">
         {/* min-w-0 : indispensable pour que les <pre> defilent au lieu d'elargir la colonne */}

@@ -7,6 +7,7 @@
 
 export const GUIDES = {
   2: {
+    title: 'Installation du serveur Samba AD DC',
     objective:
       "Installer et provisionner un contrôleur de domaine Active Directory avec Samba sur le serveur srvad (192.168.100.2).",
     prerequisites: [
@@ -290,6 +291,7 @@ ping -c 2 1.1.1.1` },
     ],
   },
   3: {
+    title: 'NTP + durcissement serveur',
     objective:
       "Configurer la synchronisation horaire du contrôleur de domaine et sécuriser le serveur avec un firewall.",
     prerequisites: [
